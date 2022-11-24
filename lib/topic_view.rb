@@ -49,6 +49,7 @@ class TopicView
 
   delegate :category, to: :topic, allow_nil: true, private: true
   delegate :require_reply_approval?, to: :category, prefix: true, allow_nil: true, private: true
+  delegate :name, to: :category, allow_nil: true, prefix: true
 
   def self.print_chunk_size
     1000
@@ -668,6 +669,10 @@ class TopicView
 
   def published_page
     @topic.published_page
+  end
+
+  def tags
+    @topic.tags.map(&:name)
   end
 
   protected

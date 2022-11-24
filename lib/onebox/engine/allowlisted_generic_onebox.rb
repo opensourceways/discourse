@@ -78,6 +78,7 @@ module Onebox
         @data ||= begin
           html_entities = HTMLEntities.new
           d = { link: link }.merge(raw)
+          binding.pry
 
           if !Onebox::Helpers.blank?(d[:title])
             d[:title] = html_entities.decode(Onebox::Helpers.truncate(d[:title], 80))
