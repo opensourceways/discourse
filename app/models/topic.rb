@@ -170,31 +170,24 @@ class Topic < ActiveRecord::Base
   rate_limit :limit_topics_per_day
   rate_limit :limit_private_messages_per_day
 
-  validates :title,
-            if: Proc.new { |t| t.new_record? || t.title_changed? },
-            presence: true,
-            topic_title_length: true,
-            censored_words: true,
-            watched_words: true,
-            quality_title: {
-              unless: :private_message?,
-            },
-            max_emojis: true,
-            unique_among: {
-              unless:
-                Proc.new { |t| (SiteSetting.allow_duplicate_topic_titles? || t.private_message?) },
-              message: :has_already_been_used,
-              allow_blank: true,
-              case_sensitive: false,
-              collection:
-                Proc.new { |t|
-                  if SiteSetting.allow_duplicate_topic_titles_category?
-                    Topic.listable_topics.where("category_id = ?", t.category_id)
-                  else
-                    Topic.listable_topics
-                  end
-                },
-            }
+  validates :title, if: Proc.new { |t| t.new_record? || t.title_changed? },
+                    presence: true,
+                    topic_title_length: true,
+                    censored_words: true,
+                    watched_words: true,
+                    title_moderator: {unless: Proc.new { |v| v.new_record? }},
+                    quality_title: { unless: :private_message? },
+                    max_emojis: true,
+                    unique_among: { unless: Proc.new { |t| (SiteSetting.allow_duplicate_topic_titles? || t.private_message?) },
+                                    message: :has_already_been_used,
+                                    allow_blank: true,
+                                    case_sensitive: false,
+                                    collection: Proc.new { |t|
+                                      SiteSetting.allow_duplicate_topic_titles_category? ?
+                                        Topic.listable_topics.where("category_id = ?", t.category_id) :
+                                        Topic.listable_topics
+                                    }
+                                  }
 
   validates :category_id,
             presence: true,
