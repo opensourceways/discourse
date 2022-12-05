@@ -262,6 +262,13 @@ class UploadsController < ApplicationController
       filename = file.original_filename
     end
 
+    # image moderation
+    image_base64 = Base64.encode64(File.read(tempfile))
+    suggestion = ::Moderator.should_block_image? image_base64, 'article', ['all']
+    if suggestion == 'block'
+      return { errors: [I18n.t("contains_sensitive_image")] }
+    end
+  
     return { errors: [I18n.t("upload.file_missing")] } if tempfile.nil?
 
     opts = {
