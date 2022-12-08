@@ -37,7 +37,7 @@ class ChatMessage < ActiveRecord::Base
 
   def validate_message(has_uploads:)
     WatchedWordsValidator.new(attributes: [:message]).validate(self)
-
+    ChatModeratorValidator.new(attributes: [:message]).validate(self)
     if self.new_record? || self.changed.include?("message")
       Chat::DuplicateMessageValidator.new(self).validate
     end
