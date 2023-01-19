@@ -283,15 +283,15 @@ class UploadsController < ApplicationController
       tempfile = file.tempfile
       filename = file.original_filename
     end
+  
+    return { errors: [I18n.t("upload.file_missing")] } if tempfile.nil?
 
     # image moderation
     image_base64 = Base64.encode64(File.read(tempfile))
     suggestion = ::Moderator.should_block_image? image_base64, 'article', ['all']
     if suggestion == 'block'
-      return { errors: [I18n.t("contains_sensitive_image")] }
+      return { errors: [I18n.t("contains_sensitive_image", {locale: "zh_CN"})] }
     end
-  
-    return { errors: [I18n.t("upload.file_missing")] } if tempfile.nil?
 
     opts = {
       type: type,

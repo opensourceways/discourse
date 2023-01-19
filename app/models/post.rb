@@ -63,7 +63,7 @@ class Post < ActiveRecord::Base
   has_many :post_hotlinked_media, dependent: :destroy, class_name: "PostHotlinkedMedia"
 
   validates_with PostValidator, unless: :skip_validation
-  validates :raw, post_moderator: true, unless: Proc.new { |v| v.new_record? }
+  validates :raw, post_moderator: true, unless: Proc.new { |v| v.new_record? || v.acting_user&.staff?}
 
   after_commit :index_search
 
