@@ -176,7 +176,7 @@ class Topic < ActiveRecord::Base
             topic_title_length: true,
             censored_words: true,
             watched_words: true,
-            title_moderator: {unless: Proc.new { |v| v.new_record? }},
+            title_moderator: {unless: Proc.new { |v| v.new_record? || v.acting_user&.staff? }},
             quality_title: {
               unless: :private_message?,
             },
