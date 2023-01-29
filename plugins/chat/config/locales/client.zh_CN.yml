@@ -107,14 +107,15 @@ zh_CN:
       join: "加入"
       new_messages: "新消息"
       mention_warning:
-        cannot_see:
-          other: "%{usernames} 无法访问此频道且未收到通知。"
         dismiss: "忽略"
         invitations_sent:
           other: "已发送邀请"
         invite: "邀请加入频道"
-        without_membership:
-          other: "%{usernames} 尚未加入此频道。"
+        warning_multiple:
+          other: "其他 %{count} 个"
+        groups:
+          users_limit:
+            other: "%{count} 位用户"
       aria_roles:
         header: "聊天标题"
         composer: "聊天输入框"
@@ -172,7 +173,6 @@ zh_CN:
         read_only: "只读"
         archived_header: "频道已被归档"
         archived: "已归档"
-        archive_failed: "频道归档失败。%{completed} 条（共 %{total} 条）消息已被归档到<a target=\"_blank\" href=\"%{topic_url}\">目标话题</a>。按“重试”，尝试完成存档。"
         archive_completed: "请参阅<a target=\"_blank\" href=\"%{topic_url}\">归档话题</a>"
         closed_header: "频道已被关闭"
         closed: "已关闭"
@@ -268,6 +268,7 @@ zh_CN:
       settings:
         auto_join_users_label: "自动添加用户"
         auto_join_users_info: "每小时检查哪些用户在过去 3 个月内处于活跃状态，如果他们有权访问“%{category}”类别，则将他们添加到此频道。"
+        enable_auto_join_users: "自动添加所有最近活跃的用户"
         auto_join_users_warning: "所有不是此频道成员且有权访问“%{category}”类别的用户都将加入。确定吗？"
         desktop_notification_level: "桌面通知"
         follow: "加入"
@@ -287,7 +288,6 @@ zh_CN:
         title: "聊天"
       direct_messages:
         title: "个人聊天"
-        new: "新的个人聊天"
         create: "开始"
         leave: "离开此个人聊天"
         cannot_create: "抱歉，您无法发送直接消息。"

@@ -1,14 +1,11 @@
 import { escapeExpression } from "discourse/lib/utilities";
 import Controller from "@ember/controller";
-import ChatApi from "discourse/plugins/chat/discourse/lib/chat-api";
-import ChatChannel from "discourse/plugins/chat/discourse/models/chat-channel";
 import I18n from "I18n";
 import ModalFunctionality from "discourse/mixins/modal-functionality";
-import { ajax } from "discourse/lib/ajax";
 import { action, computed } from "@ember/object";
 import { gt, notEmpty } from "@ember/object/computed";
 import { inject as service } from "@ember/service";
-import { isBlank } from "@ember/utils";
+import { isBlank, isPresent } from "@ember/utils";
 import { htmlSafe } from "@ember/template";
 
 const DEFAULT_HINT = htmlSafe(
@@ -23,6 +20,8 @@ export default class CreateChannelController extends Controller.extend(
 ) {
   @service chat;
   @service dialog;
+  @service chatChannelsManager;
+  @service chatApi;
 
   category = null;
   categoryId = null;
@@ -38,6 +37,13 @@ export default class CreateChannelController extends Controller.extend(
   @computed("categorySelected", "name")
   get createDisabled() {
     return !this.categorySelected || isBlank(this.name);
+  }
+
+  @computed("categorySelected", "name")
+  get categoryName() {
+    return this.categorySelected && isPresent(this.name)
+      ? escapeExpression(this.name)
+      : null;
   }
 
   onShow() {
@@ -57,20 +63,18 @@ export default class CreateChannelController extends Controller.extend(
 
   _createChannel() {
     const data = {
-      id: this.categoryId,
+      chatable_id: this.categoryId,
       name: this.name,
       description: this.description,
       auto_join_users: this.autoJoinUsers,
     };
 
-    return ajax("/chat/chat_channels", { method: "PUT", data })
-      .then((response) => {
-        const chatChannel = ChatChannel.create(response.chat_channel);
-
-        return this.chat.startTrackingChannel(chatChannel).then(() => {
-          this.send("closeModal");
-          this.chat.openChannel(chatChannel);
-        });
+    return this.chatApi
+      .createChannel(data)
+      .then((channel) => {
+        this.send("closeModal");
+        this.chatChannelsManager.follow(channel);
+        this.chat.openChannel(channel);
       })
       .catch((e) => {
         this.flash(e.jqXHR.responseJSON.errors[0], "error");
@@ -117,24 +121,26 @@ export default class CreateChannelController extends Controller.extend(
     if (category) {
       const fullSlug = this._buildCategorySlug(category);
 
-      return ChatApi.categoryPermissions(category.id).then((catPermissions) => {
-        this._updateAutoJoinConfirmWarning(category, catPermissions);
-        const allowedGroups = catPermissions.allowed_groups;
-        const translationKey =
-          allowedGroups.length < 3 ? "hint_groups" : "hint_multiple_groups";
+      return this.chatApi
+        .categoryPermissions(category.id)
+        .then((catPermissions) => {
+          this._updateAutoJoinConfirmWarning(category, catPermissions);
+          const allowedGroups = catPermissions.allowed_groups;
+          const translationKey =
+            allowedGroups.length < 3 ? "hint_groups" : "hint_multiple_groups";
 
-        this.set(
-          "categoryPermissionsHint",
-          htmlSafe(
-            I18n.t(`chat.create_channel.choose_category.${translationKey}`, {
-              link: `/c/${escapeExpression(fullSlug)}/edit/security`,
-              hint: escapeExpression(allowedGroups[0]),
-              hint_2: escapeExpression(allowedGroups[1]),
-              count: allowedGroups.length,
-            })
-          )
-        );
-      });
+          this.set(
+            "categoryPermissionsHint",
+            htmlSafe(
+              I18n.t(`chat.create_channel.choose_category.${translationKey}`, {
+                link: `/c/${escapeExpression(fullSlug)}/edit/security`,
+                hint: escapeExpression(allowedGroups[0]),
+                hint_2: escapeExpression(allowedGroups[1]),
+                count: allowedGroups.length,
+              })
+            )
+          );
+        });
     } else {
       this.set("categoryPermissionsHint", DEFAULT_HINT);
       this.set("autoJoinWarning", "");
@@ -150,7 +156,7 @@ export default class CreateChannelController extends Controller.extend(
     this.setProperties({
       categoryId,
       category,
-      name: category?.name || "",
+      name: this.name || category?.name || "",
     });
   }
 

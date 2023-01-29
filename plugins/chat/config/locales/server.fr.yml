@@ -32,13 +32,12 @@ fr:
     chat_channel_archive_complete:
       title: "Archivage du canal de discussion terminé"
       subject_template: "L'archivage du canal de discussion est terminé"
-      text_body_template: |
-        L'archivage du canal de discussion **\#%{channel_name}** a bien été effectué. Les messages ont été copiés dans le sujet [%{topic_title}](%{topic_url}).
     chat_channel_archive_failed:
       title: "Échec de l'archivage du canal de discussion"
       subject_template: "Échec de l'archivage du canal de discussion"
-      text_body_template: |
-        L'archivage du canal de discussion **\#%{channel_name}** a échoué. Les messages de %{messages_archived} ont été archivés. Les messages partiellement archivés ont été copiés dans le sujet [%{topic_title}](%{topic_url}). Visitez le canal à l'adresse %{channel_url} pour réessayer.
+    chat_channel_archive_failed_no_topic:
+      title: "Échec de l'archivage du canal de discussion"
+      subject_template: "Échec de l'archivage du canal de discussion"
   chat:
     deleted_chat_username: supprimé
     errors:
@@ -166,13 +165,8 @@ fr:
         other: "Vous avez de nouveaux messages de discussions"
       from: "%{site_name}"
       subject:
-        direct_message:
-          one: "[%{email_prefix}] Nouveau message de %{message_title}"
-          other: "[%{email_prefix}] Nouveaux messages de %{message_title} et de %{others}"
-        chat_channel:
-          one: "[%{email_prefix}] Nouveau message dans %{message_title}"
-          other: "[%{email_prefix}] Nouveaux messages dans %{message_title} et %{others}"
-        others: "%{count} autres"
+        direct_message_from_1: "[%{email_prefix}] Nouveau message de %{username}"
+        chat_channel_1: "[%{email_prefix}] Nouveau message dans %{channel}"
       unsubscribe: "Ce résumé de discussion est envoyé à partir de %{site_link} lorsque vous vous absentez. Changez vos %{email_preferences_link} ou %{unsubscribe_link} pour vous désabonner."
       unsubscribe_no_link: "Ce résumé de discussion est envoyé à partir de %{site_link} lorsque vous vous absentez. Changez vos %{email_preferences_link}."
       view_messages:

@@ -108,17 +108,15 @@ es:
       join: "Unirse"
       new_messages: "nuevos mensajes"
       mention_warning:
-        cannot_see:
-          one: "%{usernames} no puede acceder a este canal y no fue notificado."
-          other: "%{usernames} no pueden acceder a este canal y no fueron notificados."
         dismiss: "descartar"
         invitations_sent:
           one: "Invitación enviada"
           other: "Invitaciones enviadas"
         invite: "Invitar al canal"
-        without_membership:
-          one: "%{usernames} no se ha unido a este canal."
-          other: "%{usernames} no se han unido a este canal."
+        groups:
+          users_limit:
+            one: "%{count} usuario"
+            other: "%{count} usuarios"
       aria_roles:
         header: "Encabezado del chat"
         composer: "Compositor del chat"
@@ -177,7 +175,6 @@ es:
         read_only: "Solo lectura"
         archived_header: "El canal está archivado"
         archived: "Archivado"
-        archive_failed: "La archivación del canal ha fallado. Se han archivado %{completed}/%{total} mensajes en <a target=\"_blank\" href=\"%{topic_url}\">el tema de destino</a>. Pulsa reintentar para intentar completar el archivo."
         archive_completed: "Ver <a target=\"_blank\" href=\"%{topic_url}\">el tema del archivo</a>"
         closed_header: "El canal está cerrado"
         closed: "Cerrado"
@@ -276,6 +273,7 @@ es:
       settings:
         auto_join_users_label: "Añadir usuarios automáticamente"
         auto_join_users_info: "Consulta cada hora qué usuarios han estado activos en los últimos 3 meses y, si tienen acceso a la categoría %{category} , añádelos a este canal."
+        enable_auto_join_users: "Añade automáticamente todos los usuarios activos recientemente"
         auto_join_users_warning: "Todos los usuarios que no sean miembros de este canal y tengan acceso a la categoría %{category} se unirán. ¿Estás seguro/a?"
         desktop_notification_level: "Notificaciones de escritorio"
         follow: "Unirse"
@@ -295,7 +293,6 @@ es:
         title: "Chat"
       direct_messages:
         title: "Chat personal"
-        new: "Nuevo chat personal"
         create: "Ir"
         leave: "Abandonar este chat personal"
         cannot_create: "Lo sentimos, no puedes enviar mensajes directos."

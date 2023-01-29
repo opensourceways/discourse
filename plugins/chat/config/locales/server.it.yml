@@ -32,13 +32,12 @@ it:
     chat_channel_archive_complete:
       title: "Archiviazione canale chat completata"
       subject_template: "Archiviazione del canale di chat completata correttamente"
-      text_body_template: |
-        L'archiviazione del canale di chat **\#%{channel_name}** è stata completata con successo. I messaggi sono stati copiati nell'argomento [%{topic_title}](%{topic_url}).
     chat_channel_archive_failed:
       title: "Archiviazione canale chat non riuscita"
       subject_template: "Archiviazione canale chat non riuscita"
-      text_body_template: |
-        L'archiviazione del canale di chat **\#%{channel_name}** non è riuscita. %{messages_archived} messaggi sono stati archiviati. I messaggi parzialmente archiviati sono stati copiati nell'argomento [%{topic_title}](%{topic_url}). Visita il canale in %{channel_url} per riprovare.
+    chat_channel_archive_failed_no_topic:
+      title: "Archiviazione canale chat non riuscita"
+      subject_template: "Archiviazione canale chat non riuscita"
   chat:
     deleted_chat_username: eliminato
     errors:
@@ -166,13 +165,8 @@ it:
         other: "Hai nuovi messaggi di chat"
       from: "%{site_name}"
       subject:
-        direct_message:
-          one: "[%{email_prefix}] Nuovo messaggio da %{message_title}"
-          other: "[%{email_prefix}] Nuovi messaggi da %{message_title} e %{others}"
-        chat_channel:
-          one: "[%{email_prefix}] Nuovo messaggio in %{message_title}"
-          other: "[%{email_prefix}] Nuovi messaggi in %{message_title} e %{others}"
-        others: "e %{count} altri"
+        direct_message_from_1: "[%{email_prefix}] Nuovo messaggio da %{username}"
+        chat_channel_1: "[%{email_prefix}] Nuovo messaggio in %{channel}"
       unsubscribe: "Questo riepilogo della chat viene inviato da %{site_link} quando non ci sei. Modifica %{email_preferences_link} o %{unsubscribe_link} per annullare l'iscrizione."
       unsubscribe_no_link: "Questo riepilogo della chat viene inviato da %{site_link} quando non ci sei. Modifica %{email_preferences_link}."
       view_messages:

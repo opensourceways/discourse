@@ -108,17 +108,15 @@ de:
       join: "Beitreten"
       new_messages: "neue Nachrichten"
       mention_warning:
-        cannot_see:
-          one: "%{usernames} kann nicht auf diesen Kanal zugreifen und wurde nicht benachrichtigt."
-          other: "%{usernames} können nicht auf diesen Kanal zugreifen und wurden nicht benachrichtigt."
         dismiss: "verwerfen"
         invitations_sent:
           one: "Einladung gesendet"
           other: "Einladungen gesendet"
         invite: "Zum Kanal einladen"
-        without_membership:
-          one: "%{usernames} ist diesem Kanal nicht beigetreten."
-          other: "%{usernames} sind diesem Kanal nicht beigetreten."
+        groups:
+          users_limit:
+            one: "%{count} Benutzer"
+            other: "%{count} Benutzer"
       aria_roles:
         header: "Chat-Kopfzeile"
         composer: "Chat-Composer"
@@ -177,7 +175,6 @@ de:
         read_only: "Schreibgeschützt"
         archived_header: "Kanal ist archiviert"
         archived: "Archiviert"
-        archive_failed: "Archivieren des Kanals fehlgeschlagen. %{completed}/%{total} Nachrichten wurden im <a target=\"_blank\" href=\"%{topic_url}\">Zielthema</a> archiviert. Drücke auf „Erneut versuchen“, um zu versuchen, die Archivierung abzuschließen."
         archive_completed: "<a target=\"_blank\" href=\"%{topic_url}\">Archivthema</a> anzeigen"
         closed_header: "Kanal ist geschlossen"
         closed: "Geschlossen"
@@ -276,6 +273,7 @@ de:
       settings:
         auto_join_users_label: "Benutzer automatisch hinzufügen"
         auto_join_users_info: "Stündlich prüfen, welche Benutzer in den letzten 3 Monaten aktiv waren, und zu diesem Kanal hinzufügen, falls sie Zugriff auf die Kategorie %{category} haben."
+        enable_auto_join_users: "Automatisch alle kürzlich aktiven Benutzer hinzufügen"
         auto_join_users_warning: "Jeder Benutzer, der kein Mitglied dieses Kanals ist und Zugriff auf die Kategorie %{category} hat, wird beitreten. Bist du dir sicher?"
         desktop_notification_level: "Desktop-Benachrichtigungen"
         follow: "Beitreten"
@@ -295,7 +293,6 @@ de:
         title: "Chat"
       direct_messages:
         title: "Persönlicher Chat"
-        new: "Neuer persönlicher Chat"
         create: "Los"
         leave: "Diesen persönlichen Chat verlassen"
         cannot_create: "Du kannst leider keine Direktnachrichten senden."

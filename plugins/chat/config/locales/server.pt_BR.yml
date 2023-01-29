@@ -33,13 +33,12 @@ pt_BR:
     chat_channel_archive_complete:
       title: "Arquivamento do Canal de Chat Concluído"
       subject_template: "Arquivo do canal de chat concluído com sucesso"
-      text_body_template: |
-        O arquivamento do canal de chat **\#%{channel_name}** foi concluído com êxito. As mensagens foram copiadas para o tópico [%{topic_title}](%{topic_url}).
     chat_channel_archive_failed:
       title: "Falha no Arquivamento do Canal de Chat"
       subject_template: "Falha no arquivamento do canal de chat"
-      text_body_template: |
-        Falha ao realizar o arquivamento do canal de chat **\#%{channel_name}**. %{messages_archived} mensagens foram arquivadas. As mensagens parcialmente arquivadas foram copiadas para o tópico [%{topic_title}](%{topic_url}). Visite o canal em %{channel_url} para tentar novamente.
+    chat_channel_archive_failed_no_topic:
+      title: "Falha no Arquivamento do Canal de Chat"
+      subject_template: "Falha no arquivamento do canal de chat"
   chat:
     deleted_chat_username: excluído
     errors:
@@ -167,13 +166,8 @@ pt_BR:
         other: "Você tem novas mensagens de chat"
       from: "%{site_name}"
       subject:
-        direct_message:
-          one: "[%{email_prefix}] Nova mensagem de %{message_title}"
-          other: "[%{email_prefix}] Novas mensagens de %{message_title} e %{others}"
-        chat_channel:
-          one: "[%{email_prefix}] Nova mensagem de %{message_title}"
-          other: "[%{email_prefix}] Novas mensagens em %{message_title} e %{others}"
-        others: "outros %{count}"
+        direct_message_from_1: "[%{email_prefix}] Nova mensagem de %{username}"
+        chat_channel_1: "[%{email_prefix}] Nova mensagem de %{channel}"
       unsubscribe: "Este resumo do chat será enviado de %{site_link} quando você estiver ausente. Altere seu %{email_preferences_link}, ou %{unsubscribe_link} para cancelar a inscrição."
       unsubscribe_no_link: "Este resumo do chat será enviado de %{site_link} quando você estiver ausente. Altere seu %{email_preferences_link}."
       view_messages:

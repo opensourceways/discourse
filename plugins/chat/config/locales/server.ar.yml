@@ -32,13 +32,12 @@ ar:
     chat_channel_archive_complete:
       title: "اكتمل أرشيف قناة الدردشة"
       subject_template: "اكتمل أرشيف قناة الدردشة بنجاح"
-      text_body_template: |
-        اكتملت أرشفة قناة الدردشة **\#%{channel_name}** بنجاح. وتم نسخ الرسائل إلى الموضوع [%{topic_title}](%{topic_url}).
     chat_channel_archive_failed:
       title: "فشلت أرشفة قناة الدردشة"
       subject_template: "فشلت أرشفة قناة الدردشة"
-      text_body_template: |
-        فشلت أرشفة قناة الدردشة **\#%{channel_name}**. تم وضع الرسائل %{messages_archived} في الأرشيف. تم نسخ الرسائل المؤرشفة جزئيًا في الموضوع [%{topic_title}](%{topic_url}). انتقل إلى القناة في %{channel_url} لإعادة المحاولة.
+    chat_channel_archive_failed_no_topic:
+      title: "فشلت أرشفة قناة الدردشة"
+      subject_template: "فشلت أرشفة قناة الدردشة"
   chat:
     deleted_chat_username: تم الحذف
     errors:
@@ -186,21 +185,8 @@ ar:
         other: "لديك رسائل دردشة جديدة"
       from: "%{site_name}"
       subject:
-        direct_message:
-          zero: "[%{email_prefix}] رسالتان جديدتان من %{message_title} و%{others}"
-          one: "[%{email_prefix}] رسالة جديدة من %{message_title}"
-          two: "[%{email_prefix}] رسالتان جديدتان من %{message_title} و%{others}"
-          few: "[%{email_prefix}] رسالتان جديدتان من %{message_title} و%{others}"
-          many: "[%{email_prefix}] رسالتان جديدتان من %{message_title} و%{others}"
-          other: "[%{email_prefix}] رسالتان جديدتان من %{message_title} و%{others}"
-        chat_channel:
-          zero: "[%{email_prefix}] رسالتان جديدتان في %{message_title} و%{others}"
-          one: "[%{email_prefix}] رسالة جديدة في %{message_title}"
-          two: "[%{email_prefix}] رسالتان جديدتان في %{message_title} و%{others}"
-          few: "[%{email_prefix}] رسائل جديدة في %{message_title} و%{others}"
-          many: "[%{email_prefix}] رسالتان جديدتان في %{message_title} و%{others}"
-          other: "[%{email_prefix}] رسالتان جديدتان في %{message_title} و%{others}"
-        others: "%{count} آخرين"
+        direct_message_from_1: "[%{email_prefix}] رسالة جديدة من %{username}"
+        chat_channel_1: "[%{email_prefix}] رسالة جديدة في %{channel}"
       unsubscribe: "يتم إرسال ملخص الدردشة هذا من %{site_link} عندما تكون غائبًا. غيِّر %{email_preferences_link} أو %{unsubscribe_link} لإلغاء الاشتراك."
       unsubscribe_no_link: "يتم إرسال ملخص الدردشة هذا من %{site_link} عندما تكون غائبًا. غيِّر %{email_preferences_link} لديك."
       view_messages:

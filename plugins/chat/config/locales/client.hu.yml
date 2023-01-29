@@ -101,17 +101,15 @@ hu:
       join: "Belépés"
       new_messages: "új üzenetek"
       mention_warning:
-        cannot_see:
-          one: "%{usernames} nem fér hozzá ehhez a csatornához, és nem lett értesítve."
-          other: "%{usernames} nem fér hozzá ehhez a csatornához, és nem lettek értesítve."
         dismiss: "elvetés"
         invitations_sent:
           one: "Meghívó elküldve"
           other: "Meghívók elküldve"
         invite: "Meghívás a csatornára"
-        without_membership:
-          one: "%{usernames} nem csatlakozott ehhez a csatornához."
-          other: "%{usernames} nem csatlakozott ehhez a csatornához."
+        groups:
+          users_limit:
+            one: "%{count} felhasználó"
+            other: "%{count} felhasználó"
       aria_roles:
         header: "Csevegés fejléce"
         composer: "Csevegés szerkesztője"
@@ -170,7 +168,6 @@ hu:
         read_only: "Csak olvasható"
         archived_header: "A csatorna archiválva van"
         archived: "Archivált"
-        archive_failed: "A csatorna archiválása nem sikerült.</a>%{completed}/%{total} üzenet archiválva lett a <a target=\"_blank\" href=\"%{topic_url}\">céltémában</a> . Nyomja meg az Újra gombot az archiválás befejezéséhez."
         archive_completed: "Lásd <a target=\"_blank\" href=\"%{topic_url}\">az archív témát</a>"
         closed_header: "A csatorna zárolt"
         closed: "Zárt"
@@ -262,6 +259,7 @@ hu:
         mention: "Csak megemlítésnél"
         always: "Összes tevékenységnél"
       settings:
+        channel_wide_mentions_label: "Engedélyezve az @all és @here említések"
         auto_join_users_label: "Felhasználók automatikus hozzáadása"
         enable_auto_join_users: "Az összes nemrégiben aktív felhasználó automatikus hozzáadása"
         desktop_notification_level: "Asztali értesítések"
@@ -281,7 +279,7 @@ hu:
         title: "Csevegés"
       direct_messages:
         title: "Személyes csevegés"
-        new: "Új személyes csevegés"
+        new: "Személyes csevegés létrehozása"
         create: "Ugrás"
         leave: "E személyes csevegés elhagyása"
       incoming_webhooks:

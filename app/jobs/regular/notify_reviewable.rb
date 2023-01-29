@@ -11,16 +11,15 @@ class Jobs::NotifyReviewable < ::Jobs::Base
     all_updates = Hash.new { |h, k| h[k] = {} }
 
     if args[:updated_reviewable_ids].present?
-      Reviewable.where(id: args[:updated_reviewable_ids]).each do |r|
-        payload = {
-          last_performing_username: args[:performing_username],
-          status: r.status
-        }
+      Reviewable
+        .where(id: args[:updated_reviewable_ids])
+        .each do |r|
+          payload = { last_performing_username: args[:performing_username], status: r.status }
 
-        all_updates[:admins][r.id] = payload
-        all_updates[:moderators][r.id] = payload if r.reviewable_by_moderator?
-        all_updates[r.reviewable_by_group_id][r.id] = payload if r.reviewable_by_group_id
-      end
+          all_updates[:admins][r.id] = payload
+          all_updates[:moderators][r.id] = payload if r.reviewable_by_moderator?
+          all_updates[r.reviewable_by_group_id][r.id] = payload if r.reviewable_by_group_id
+        end
     end
 
     counts = Hash.new(0)
@@ -31,30 +30,27 @@ class Jobs::NotifyReviewable < ::Jobs::Base
       counts[r.reviewable_by_group_id] += 1 if r.reviewable_by_group_id
     end
 
-    if SiteSetting.enable_experimental_sidebar_hamburger
-      notify_users(
-        User.real.admins,
-        all_updates[:admins]
-      )
-    else
+    if SiteSetting.legacy_navigation_menu?
       notify_legacy(
         User.real.admins.pluck(:id),
         count: counts[:admins],
         updates: all_updates[:admins],
       )
+    else
+      notify_users(User.real.admins, all_updates[:admins])
     end
 
     if reviewable.reviewable_by_moderator?
-      if SiteSetting.enable_experimental_sidebar_hamburger
-        notify_users(
-          User.real.moderators.where("id NOT IN (?)", @contacted),
-          all_updates[:moderators]
-        )
-      else
+      if SiteSetting.legacy_navigation_menu?
         notify_legacy(
           User.real.moderators.where("id NOT IN (?)", @contacted).pluck(:id),
           count: counts[:moderators],
           updates: all_updates[:moderators],
+        )
+      else
+        notify_users(
+          User.real.moderators.where("id NOT IN (?)", @contacted),
+          all_updates[:moderators],
         )
       end
     end
@@ -70,10 +66,10 @@ class Jobs::NotifyReviewable < ::Jobs::Base
           count += counts[gu.group_id]
         end
 
-        if SiteSetting.enable_experimental_sidebar_hamburger
-          notify_user(user, updates)
-        else
+        if SiteSetting.legacy_navigation_menu?
           notify_legacy([user.id], count: count, updates: updates)
+        else
+          notify_user(user, updates)
         end
       end
 

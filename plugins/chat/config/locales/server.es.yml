@@ -32,13 +32,12 @@ es:
     chat_channel_archive_complete:
       title: "Archivado del canal de chat completado"
       subject_template: "El archivado del canal de chat se ha completado con éxito"
-      text_body_template: |
-        El archivado del canal de chat **\#%{channel_name}** se completó con éxito. Los mensajes se copiaron en el tema [%{topic_title}](%{topic_url}).
     chat_channel_archive_failed:
       title: "No se pudo archivar el canal"
       subject_template: "No se pudo archivar el canal"
-      text_body_template: |
-        El archivo del canal de chat **\#%{channel_name}** ha fallado. Se han archivado los mensajes de %{messages_archived}. Los mensajes parcialmente archivados se han copiado en el tema [%{topic_title}](%{topic_url}). Visita el canal en %{channel_url} para volver a intentarlo.
+    chat_channel_archive_failed_no_topic:
+      title: "No se pudo archivar el canal"
+      subject_template: "No se pudo archivar el canal"
   chat:
     deleted_chat_username: eliminado
     errors:
@@ -166,13 +165,8 @@ es:
         other: "Tienes nuevos mensajes de chat"
       from: "%{site_name}"
       subject:
-        direct_message:
-          one: "[%{email_prefix}] Nuevo mensaje de %{message_title}"
-          other: "[%{email_prefix}] Nuevos mensajes de %{message_title} y %{others}"
-        chat_channel:
-          one: "[%{email_prefix}] Nuevo mensaje en %{message_title}"
-          other: "[%{email_prefix}] Nuevos mensajes en %{message_title} y %{others}"
-        others: "%{count} otros"
+        direct_message_from_1: "[%{email_prefix}] Nuevo mensaje de %{username}"
+        chat_channel_1: "[%{email_prefix}] Nuevo mensaje en %{channel}"
       unsubscribe: "Este resumen del chat se envía desde %{site_link} cuando estás fuera. Cambia tu %{email_preferences_link}, o %{unsubscribe_link} para darte de baja."
       unsubscribe_no_link: "Este resumen del chat se envía desde %{site_link} cuando estás fuera. Cambia tu %{email_preferences_link}."
       view_messages:

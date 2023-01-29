@@ -32,13 +32,12 @@ de:
     chat_channel_archive_complete:
       title: "Chat-Kanal-Archivierung abgeschlossen"
       subject_template: "Chat-Kanal-Archivierung erfolgreich abgeschlossen"
-      text_body_template: |
-        Die Archivierung des Chat-Kanals **\#%{channel_name}** wurde erfolgreich abgeschlossen. Die Nachrichten wurden in das Thema [%{topic_title}](%{topic_url}) kopiert.
     chat_channel_archive_failed:
       title: "Chat-Kanal-Archivierung fehlgeschlagen"
       subject_template: "Chat-Kanal-Archivierung fehlgeschlagen"
-      text_body_template: |
-        Die Archivierung des Chat-Kanals **\#%{channel_name}** ist fehlgeschlagen. %{messages_archived} Nachrichten wurden archiviert. Teilweise archivierte Nachrichten wurden in das Thema [%{topic_title}](%{topic_url}) kopiert. Besuche den Kanal unter %{channel_url}, um es erneut zu versuchen.
+    chat_channel_archive_failed_no_topic:
+      title: "Chat-Kanal-Archivierung fehlgeschlagen"
+      subject_template: "Chat-Kanal-Archivierung fehlgeschlagen"
   chat:
     deleted_chat_username: gelöscht
     errors:
@@ -166,13 +165,8 @@ de:
         other: "Du hast neue Chat-Nachrichten"
       from: "%{site_name}"
       subject:
-        direct_message:
-          one: "[%{email_prefix}] Neue Nachricht von %{message_title}"
-          other: "[%{email_prefix}] Neue Nachrichten von %{message_title} und %{others}"
-        chat_channel:
-          one: "[%{email_prefix}] Neue Nachricht in %{message_title}"
-          other: "[%{email_prefix}] Neue Nachrichten in %{message_title} und %{others}"
-        others: "%{count} andere"
+        direct_message_from_1: "[%{email_prefix}] Neue Nachricht von %{username}"
+        chat_channel_1: "[%{email_prefix}] Neue Nachricht in %{channel}"
       unsubscribe: "Diese Chat-Zusammenfassung wird dir von %{site_link} gesendet, wenn du abwesend bist. Ändere deine %{email_preferences_link} oder %{unsubscribe_link}, um dich abzumelden."
       unsubscribe_no_link: "Diese Chat-Zusammenfassung wird dir von %{site_link} gesendet, wenn du abwesend bist. Ändere deine %{email_preferences_link}."
       view_messages:
