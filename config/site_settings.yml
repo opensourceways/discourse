@@ -328,9 +328,6 @@ basic:
     default: 2
     min: 0
     max: 6
-  enable_whispers:
-    client: true
-    default: false
   whispers_allowed_groups:
     client: true
     type: group_list
@@ -348,6 +345,12 @@ basic:
   push_notifications_icon:
     default: ""
     type: upload
+  enable_desktop_push_notifications:
+    default: true
+    client: true
+  push_notification_time_window_mins:
+    default: 10
+    min: 0
   short_title:
     default: ""
     max: 12
@@ -529,17 +532,17 @@ login:
       value: "sso_provider.value_placeholder"
   blocked_email_domains:
     default: "mailinator.com"
-    type: list
+    type: host_list
     list_type: simple
   allowed_email_domains:
     default: ""
-    type: list
+    type: host_list
     list_type: simple
   normalize_emails:
     default: false
   auto_approve_email_domains:
     default: ""
-    type: list
+    type: host_list
     list_type: simple
   hide_email_address_taken:
     client: true
@@ -908,7 +911,9 @@ posting:
     default: true
     client: true
   max_mentions_per_post: 10
-  max_users_notified_per_group_mention: 100
+  max_users_notified_per_group_mention:
+    default: 100
+    client: true
   newuser_max_replies_per_topic: 3
   newuser_max_mentions_per_post: 2
   here_mention:
@@ -1085,6 +1090,9 @@ posting:
   skip_auto_delete_reply_likes: 5
   review_every_post:
     default: false
+  max_draft_length:
+    default: 400_000
+    hidden: true
 
 email:
   email_time_window_mins:
@@ -1544,6 +1552,10 @@ files:
     default: false
     client: true
     hidden: true
+  composer_ios_media_optimisation_image_enabled:
+    default: false
+    client: true
+    hidden: true
 
 trust:
   default_trust_level:
@@ -1774,6 +1786,8 @@ security:
   suppress_secured_categories_from_admin:
     default: false
     hidden: true
+  include_secure_categories_in_tag_counts:
+    default: false
 
 onebox:
   post_onebox_maxlength:
@@ -2029,13 +2043,9 @@ developer:
   enable_safe_mode:
     default: true
     client: true
-  enable_experimental_sidebar_hamburger:
-    default: false
-    client: true
   enable_experimental_hashtag_autocomplete:
-    default: false
+    default: true
     client: true
-    hidden: true
   experimental_hashtag_search_result_limit:
     default: 20
     client: true
@@ -2058,10 +2068,12 @@ developer:
     allow_any: false
     refresh: true
 
-sidebar:
-  enable_sidebar:
-    default: true
+navigation:
+  navigation_menu:
     client: true
+    default: "sidebar"
+    type: enum
+    enum: "NavigationMenuSiteSetting"
   default_sidebar_categories:
     type: category_list
     default: ""

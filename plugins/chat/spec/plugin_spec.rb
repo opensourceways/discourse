@@ -345,14 +345,9 @@ describe Chat do
       end
     end
 
-    context "when followed public channels exist" do
+    context "when followed direct message channels exist" do
       fab!(:user_2) { Fabricate(:user) }
       fab!(:channel) { Fabricate(:direct_message_channel, users: [user, user_2]) }
-
-      before do
-        Fabricate(:user_chat_channel_membership, user: user, chat_channel: channel, following: true)
-        Fabricate(:direct_message_channel, users: [user, user_2])
-      end
 
       it "returns them" do
         expect(serializer.chat_channels[:public_channels]).to eq([])
@@ -361,7 +356,7 @@ describe Chat do
       end
     end
 
-    context "when followed direct message channels exist" do
+    context "when followed public channels exist" do
       fab!(:channel) { Fabricate(:chat_channel) }
 
       before do

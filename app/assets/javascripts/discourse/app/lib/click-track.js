@@ -5,7 +5,6 @@ import User from "discourse/models/user";
 import { ajax } from "discourse/lib/ajax";
 import getURL, { samePrefix } from "discourse-common/lib/get-url";
 import { isTesting } from "discourse-common/config/environment";
-import { selectedText } from "discourse/lib/utilities";
 import { wantsNewWindow } from "discourse/lib/intercept-click";
 import deprecated from "discourse-common/lib/deprecated";
 import { getOwner } from "discourse-common/lib/get-owner";
@@ -54,7 +53,9 @@ export function isValidLink(link) {
 
 export function shouldOpenInNewTab(href) {
   const isInternal = DiscourseURL.isInternal(href);
-  const openExternalInNewTab = User.currentProp("external_links_in_new_tab");
+  const openExternalInNewTab = User.currentProp(
+    "user_option.external_links_in_new_tab"
+  );
   return !isInternal && openExternalInNewTab;
 }
 
@@ -76,14 +77,6 @@ export default {
     // right clicks are not tracked
     if (e.which === 3) {
       return true;
-    }
-
-    // Cancel click if triggered as part of selection.
-    const selection = window.getSelection();
-    if (selection.type === "Range" || selection.rangeCount > 0) {
-      if (selectedText() !== "") {
-        return true;
-      }
     }
 
     const link = e.currentTarget;

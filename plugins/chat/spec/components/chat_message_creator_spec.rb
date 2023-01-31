@@ -32,10 +32,7 @@ describe Chat::ChatMessageCreator do
     )
   end
   let(:direct_message_channel) do
-    Chat::DirectMessageChannelCreator.create!(
-      acting_user: user1,
-      target_users: [user1, user2],
-    )
+    Chat::DirectMessageChannelCreator.create!(acting_user: user1, target_users: [user1, user2])
   end
 
   before do
@@ -112,6 +109,18 @@ describe Chat::ChatMessageCreator do
       }.to change { ChatMessage.count }.by(1)
     end
 
+    it "updates the channel’s last message date" do
+      previous_last_message_sent_at = public_chat_channel.last_message_sent_at
+
+      Chat::ChatMessageCreator.create(
+        chat_channel: public_chat_channel,
+        user: user1,
+        content: "this is a message",
+      )
+
+      expect(previous_last_message_sent_at).to be < public_chat_channel.reload.last_message_sent_at
+    end
+
     it "sets the last_editor_id to the user who created the message" do
       message =
         Chat::ChatMessageCreator.create(
@@ -123,13 +132,14 @@ describe Chat::ChatMessageCreator do
     end
 
     it "publishes a DiscourseEvent for new messages" do
-      events = DiscourseEvent.track_events {
-        Chat::ChatMessageCreator.create(
-          chat_channel: public_chat_channel,
-          user: user1,
-          content: "this is a message",
-        )
-      }
+      events =
+        DiscourseEvent.track_events do
+          Chat::ChatMessageCreator.create(
+            chat_channel: public_chat_channel,
+            user: user1,
+            content: "this is a message",
+          )
+        end
       expect(events.map { _1[:event_name] }).to include(:chat_message_created)
     end
 
@@ -356,8 +366,8 @@ describe Chat::ChatMessageCreator do
             content: "hello @#{admin_group.name}",
           )
         }.to change { admin1.chat_mentions.count }.by(1).and change {
-                                                               admin2.chat_mentions.count
-                                                             }.by(1)
+                admin2.chat_mentions.count
+              }.by(1)
       end
 
       it "doesn't mention users twice if they are direct mentioned and group mentioned" do
@@ -368,8 +378,8 @@ describe Chat::ChatMessageCreator do
             content: "hello @#{admin_group.name} @#{admin1.username} and @#{admin2.username}",
           )
         }.to change { admin1.chat_mentions.count }.by(1).and change {
-                                                               admin2.chat_mentions.count
-                                                             }.by(1)
+                admin2.chat_mentions.count
+              }.by(1)
       end
 
       it "creates chat mentions for group mentions and direct mentions" do
@@ -380,8 +390,8 @@ describe Chat::ChatMessageCreator do
             content: "hello @#{admin_group.name} @#{user2.username}",
           )
         }.to change { admin1.chat_mentions.count }.by(1).and change {
-                                                               admin2.chat_mentions.count
-                                                             }.by(1).and change { user2.chat_mentions.count }.by(1)
+                admin2.chat_mentions.count
+              }.by(1).and change { user2.chat_mentions.count }.by(1)
       end
 
       it "creates chat mentions for group mentions and direct mentions" do
@@ -392,10 +402,10 @@ describe Chat::ChatMessageCreator do
             content: "hello @#{admin_group.name} @#{user_group.name}",
           )
         }.to change { admin1.chat_mentions.count }.by(1).and change {
-                                                               admin2.chat_mentions.count
-                                                             }.by(1).and change { user2.chat_mentions.count }.by(1).and change {
-                                                                                                                          user3.chat_mentions.count
-                                                                                                                        }.by(1)
+                admin2.chat_mentions.count
+              }.by(1).and change { user2.chat_mentions.count }.by(1).and change {
+                            user3.chat_mentions.count
+                          }.by(1)
       end
 
       it "doesn't create chat mentions for group mentions where the group is un-mentionable" do
@@ -463,8 +473,8 @@ describe Chat::ChatMessageCreator do
             upload_ids: [upload1.id, upload2.id],
           )
         }.to change { ChatUpload.where(upload_id: upload1.id).count }.by(1).and change {
-                                                                                  ChatUpload.where(upload_id: upload2.id).count
-                                                                                }.by(1)
+                ChatUpload.where(upload_id: upload2.id).count
+              }.by(1)
       end
 
       it "filters out uploads that weren't uploaded by the user" do
