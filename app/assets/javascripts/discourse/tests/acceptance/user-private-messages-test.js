@@ -17,6 +17,8 @@ import {
   resetHighestReadCache,
   setHighestReadCache,
 } from "discourse/lib/topic-list-tracker";
+import { withPluginApi } from "discourse/lib/plugin-api";
+import { resetCustomUserNavMessagesDropdownRows } from "discourse/controllers/user-private-messages";
 
 acceptance(
   "User Private Messages - user with no group messages",
@@ -344,17 +346,31 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
     await publishUnreadToMessageBus({ topicId: 1 });
     await publishNewToMessageBus({ topicId: 2 });
 
-    assert.strictEqual(
-      query(".messages-nav li a.new").innerText.trim(),
-      I18n.t("user.messages.new_with_count", { count: 1 }),
-      "displays the right count"
-    );
+    if (customUserProps?.redesigned_user_page_nav_enabled) {
+      assert.strictEqual(
+        query(".user-nav__messages-new").innerText.trim(),
+        I18n.t("user.messages.new_with_count", { count: 1 }),
+        "displays the right count"
+      );
 
-    assert.strictEqual(
-      query(".messages-nav li a.unread").innerText.trim(),
-      I18n.t("user.messages.unread_with_count", { count: 1 }),
-      "displays the right count"
-    );
+      assert.strictEqual(
+        query(".user-nav__messages-unread").innerText.trim(),
+        I18n.t("user.messages.unread_with_count", { count: 1 }),
+        "displays the right count"
+      );
+    } else {
+      assert.strictEqual(
+        query(".messages-nav li a.new").innerText.trim(),
+        I18n.t("user.messages.new_with_count", { count: 1 }),
+        "displays the right count"
+      );
+
+      assert.strictEqual(
+        query(".messages-nav li a.unread").innerText.trim(),
+        I18n.t("user.messages.unread_with_count", { count: 1 }),
+        "displays the right count"
+      );
+    }
   });
 
   test("incoming new messages while viewing new", async function (assert) {
@@ -362,11 +378,19 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
 
     await publishNewToMessageBus({ topicId: 1 });
 
-    assert.strictEqual(
-      query(".messages-nav li a.new").innerText.trim(),
-      I18n.t("user.messages.new_with_count", { count: 1 }),
-      "displays the right count"
-    );
+    if (customUserProps?.redesigned_user_page_nav_enabled) {
+      assert.strictEqual(
+        query(".messages-nav .user-nav__messages-new").innerText.trim(),
+        I18n.t("user.messages.new_with_count", { count: 1 }),
+        "displays the right count"
+      );
+    } else {
+      assert.strictEqual(
+        query(".messages-nav li a.new").innerText.trim(),
+        I18n.t("user.messages.new_with_count", { count: 1 }),
+        "displays the right count"
+      );
+    }
 
     assert.ok(exists(".show-mores"), "displays the topic incoming info");
   });
@@ -376,11 +400,19 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
 
     await publishUnreadToMessageBus();
 
-    assert.strictEqual(
-      query(".messages-nav li a.unread").innerText.trim(),
-      I18n.t("user.messages.unread_with_count", { count: 1 }),
-      "displays the right count"
-    );
+    if (customUserProps?.redesigned_user_page_nav_enabled) {
+      assert.strictEqual(
+        query(".messages-nav .user-nav__messages-unread").innerText.trim(),
+        I18n.t("user.messages.unread_with_count", { count: 1 }),
+        "displays the right count"
+      );
+    } else {
+      assert.strictEqual(
+        query(".messages-nav li a.unread").innerText.trim(),
+        I18n.t("user.messages.unread_with_count", { count: 1 }),
+        "displays the right count"
+      );
+    }
 
     assert.ok(exists(".show-mores"), "displays the topic incoming info");
   });
@@ -391,33 +423,65 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
     await publishUnreadToMessageBus({ groupIds: [14], topicId: 1 });
     await publishNewToMessageBus({ groupIds: [14], topicId: 2 });
 
-    assert.strictEqual(
-      query(".messages-nav li a.unread").innerText.trim(),
-      I18n.t("user.messages.unread_with_count", { count: 1 }),
-      "displays the right count"
-    );
+    if (customUserProps?.redesigned_user_page_nav_enabled) {
+      assert.strictEqual(
+        query(
+          ".messages-nav .user-nav__messages-group-unread"
+        ).innerText.trim(),
+        I18n.t("user.messages.unread_with_count", { count: 1 }),
+        "displays the right count"
+      );
 
-    assert.strictEqual(
-      query(".messages-nav li a.new").innerText.trim(),
-      I18n.t("user.messages.new_with_count", { count: 1 }),
-      "displays the right count"
-    );
+      assert.strictEqual(
+        query(".messages-nav .user-nav__messages-group-new").innerText.trim(),
+        I18n.t("user.messages.new_with_count", { count: 1 }),
+        "displays the right count"
+      );
 
-    assert.ok(exists(".show-mores"), "displays the topic incoming info");
+      assert.ok(exists(".show-mores"), "displays the topic incoming info");
 
-    await visit("/u/charlie/messages/unread");
+      await visit("/u/charlie/messages/unread");
 
-    assert.strictEqual(
-      query(".messages-nav li a.unread").innerText.trim(),
-      I18n.t("user.messages.unread"),
-      "displays the right count"
-    );
+      assert.strictEqual(
+        query(".messages-nav .user-nav__messages-unread").innerText.trim(),
+        I18n.t("user.messages.unread"),
+        "displays the right count"
+      );
 
-    assert.strictEqual(
-      query(".messages-nav li a.new").innerText.trim(),
-      I18n.t("user.messages.new"),
-      "displays the right count"
-    );
+      assert.strictEqual(
+        query(".messages-nav .user-nav__messages-new").innerText.trim(),
+        I18n.t("user.messages.new"),
+        "displays the right count"
+      );
+    } else {
+      assert.strictEqual(
+        query(".messages-nav a.unread").innerText.trim(),
+        I18n.t("user.messages.unread_with_count", { count: 1 }),
+        "displays the right count"
+      );
+
+      assert.strictEqual(
+        query(".messages-nav  a.new").innerText.trim(),
+        I18n.t("user.messages.new_with_count", { count: 1 }),
+        "displays the right count"
+      );
+
+      assert.ok(exists(".show-mores"), "displays the topic incoming info");
+
+      await visit("/u/charlie/messages/unread");
+
+      assert.strictEqual(
+        query(".messages-nav  a.unread").innerText.trim(),
+        I18n.t("user.messages.unread"),
+        "displays the right count"
+      );
+
+      assert.strictEqual(
+        query(".messages-nav  a.new").innerText.trim(),
+        I18n.t("user.messages.new"),
+        "displays the right count"
+      );
+    }
   });
 
   test("incoming messages is not tracked on non user messages route", async function (assert) {
@@ -450,11 +514,19 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
     await click(".btn.dismiss-read");
     await click("#dismiss-read-confirm");
 
-    assert.strictEqual(
-      query(".messages-nav li a.unread").innerText.trim(),
-      I18n.t("user.messages.unread"),
-      "displays the right count"
-    );
+    if (customUserProps?.redesigned_user_page_nav_enabled) {
+      assert.strictEqual(
+        query(".user-nav__messages-unread").innerText.trim(),
+        I18n.t("user.messages.unread"),
+        "displays the right count"
+      );
+    } else {
+      assert.strictEqual(
+        query(".messages-nav li a.unread").innerText.trim(),
+        I18n.t("user.messages.unread"),
+        "displays the right count"
+      );
+    }
 
     assert.strictEqual(
       count(".topic-list-item"),
@@ -516,11 +588,19 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
 
     await click(".btn.dismiss-read");
 
-    assert.strictEqual(
-      query(".messages-nav li a.new").innerText.trim(),
-      I18n.t("user.messages.new"),
-      "displays the right count"
-    );
+    if (customUserProps?.redesigned_user_page_nav_enabled) {
+      assert.strictEqual(
+        query(".messages-nav .user-nav__messages-new").innerText.trim(),
+        I18n.t("user.messages.new"),
+        "displays the right count"
+      );
+    } else {
+      assert.strictEqual(
+        query(".messages-nav li a.new").innerText.trim(),
+        I18n.t("user.messages.new"),
+        "displays the right count"
+      );
+    }
 
     assert.strictEqual(
       count(".topic-list-item"),
@@ -699,7 +779,11 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
         "User personal inbox is selected in dropdown"
       );
 
-      await click(".messages-sent");
+      if (customUserProps?.redesigned_user_page_nav_enabled) {
+        await click(".user-nav__messages-sent");
+      } else {
+        await click(".messages-sent");
+      }
 
       assert.strictEqual(
         messagesDropdown.header().name(),
@@ -722,7 +806,11 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
         "Group inbox is selected in dropdown"
       );
 
-      await click(".messages-group-new");
+      if (customUserProps?.redesigned_user_page_nav_enabled) {
+        await click(".user-nav__messages-group-new");
+      } else {
+        await click(".messages-group-new");
+      }
 
       assert.strictEqual(
         messagesDropdown.header().name(),
@@ -752,6 +840,30 @@ function testUserPrivateMessagesWithGroupMessages(needs, customUserProps) {
         I18n.t("user.messages.tags"),
         "All tags is still selected in dropdown"
       );
+    });
+
+    test("addUserMessagesNavigationDropdownRow plugin api", async function (assert) {
+      try {
+        withPluginApi("1.5.0", (api) => {
+          api.addUserMessagesNavigationDropdownRow(
+            "preferences",
+            "test nav",
+            "arrow-left"
+          );
+        });
+
+        await visit("/u/eviltrout/messages");
+
+        const messagesDropdown = selectKit(".user-nav-messages-dropdown");
+        await messagesDropdown.expand();
+
+        const row = messagesDropdown.rowByName("test nav");
+
+        assert.strictEqual(row.value(), "/u/eviltrout/preferences");
+        assert.ok(row.icon().classList.contains("d-icon-arrow-left"));
+      } finally {
+        resetCustomUserNavMessagesDropdownRows();
+      }
     });
   }
 }

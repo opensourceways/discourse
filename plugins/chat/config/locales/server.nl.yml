@@ -33,13 +33,12 @@ nl:
     chat_channel_archive_complete:
       title: "Archiveren van chatkanaal voltooid"
       subject_template: "Archiveren van chatkanaal voltooid"
-      text_body_template: |
-        Het archiveren van het chatkanaal **\#%{channel_name}** is voltooid. De berichten zijn gekopieerd naar het topic [%{topic_title}](%{topic_url}).
     chat_channel_archive_failed:
       title: "Archiveren van chatkanaal mislukt"
       subject_template: "Archiveren van chatkanaal mislukt"
-      text_body_template: |
-        Het archiveren van het chatkanaal **\#%{channel_name}** is mislukt. %{messages_archived} berichten zijn gearchiveerd. Gedeeltelijk gearchiveerde berichten zijn gekopieerd naar het topic [%{topic_title}](%{topic_url}). Ga naar het kanaal op %{channel_url} om het opnieuw te proberen.
+    chat_channel_archive_failed_no_topic:
+      title: "Archiveren van kanaal mislukt"
+      subject_template: "Chatkanaal archiveren mislukt"
   chat:
     deleted_chat_username: verwijderd
     errors:
@@ -53,6 +52,7 @@ nl:
       duplicate_message: "Je hebt te kort geleden een identiek bericht geplaatst."
       delete_channel_failed: "Kanaal verwijderen mislukt, probeer het opnieuw."
       minimum_length_not_met: "Bericht is te kort, moet minimaal %{minimum} tekens bevatten."
+      message_too_long: "Bericht is te lang, berichten mogen maximaal %{maximum} tekens lang zijn."
       max_reactions_limit_reached: "Nieuwe reacties op dit bericht zijn niet toegestaan."
       message_move_invalid_channel: "Het bron- en bestemmingskanaal moeten openbare kanalen zijn."
       message_move_no_messages_found: "Er zijn geen berichten gevonden met de opgegeven bericht-ID's."
@@ -167,14 +167,8 @@ nl:
         other: "Je hebt nieuwe chatberichten"
       from: "%{site_name}"
       subject:
-        direct_message:
-          one: "[%{email_prefix}] Nieuw bericht van %{message_title}"
-          other: "[%{email_prefix}] Nieuwe berichten van %{message_title} en %{others}"
-        chat_channel:
-          one: "[%{email_prefix}] Nieuw bericht in %{message_title}"
-          other: "[%{email_prefix}] Nieuwe berichten in %{message_title} en %{others}"
-        other_direct_message: "van %{dm_title}"
-        others: "%{count} anderen"
+        direct_message_from_1: "[%{email_prefix}] Nieuw bericht van %{username}"
+        chat_channel_1: "[%{email_prefix}] Nieuw bericht in %{channel}"
       unsubscribe: "Deze chatsamenvatting wordt verzonden van %{site_link} wanneer je afwezig bent. Wijzig je %{email_preferences_link}, of %{unsubscribe_link} om je af te melden."
       unsubscribe_no_link: "Deze chatsamenvatting wordt verzonden van %{site_link} wanneer je afwezig bent. Wijzig je %{email_preferences_link}."
       view_messages:

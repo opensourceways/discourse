@@ -23,7 +23,6 @@ import {
   linkSeenHashtagsInContext,
 } from "discourse/lib/hashtag-autocomplete";
 import {
-  cannotSee,
   fetchUnseenMentions,
   linkSeenMentions,
 } from "discourse/lib/link-mentions";
@@ -107,8 +106,6 @@ export default Component.extend(ComposerUploadUppy, {
   fileUploadElementId: "file-uploader",
   mobileFileUploaderId: "mobile-file-upload",
 
-  // TODO (martin) Remove this once the chat plugin is using the new composerEventPrefix
-  eventPrefix: "composer",
   composerEventPrefix: "composer",
   uploadType: "composer",
   uppyId: "composer-editor-uppy",
@@ -126,6 +123,7 @@ export default Component.extend(ComposerUploadUppy, {
   init() {
     this._super(...arguments);
     this.warnedCannotSeeMentions = [];
+    this.warnedGroupMentions = [];
   },
 
   @discourseComputed("composer.requiredCategoryMissing")
@@ -199,21 +197,6 @@ export default Component.extend(ComposerUploadUppy, {
   },
 
   @bind
-  _userSearchTerm(term) {
-    const topicId = this.get("topic.id");
-    // maybe this is a brand new topic, so grab category from composer
-    const categoryId =
-      this.get("topic.category_id") || this.get("composer.categoryId");
-
-    return userSearch({
-      term,
-      topicId,
-      categoryId,
-      includeGroups: true,
-    });
-  },
-
-  @bind
   _afterMentionComplete(value) {
     this.composer.set("reply", value);
 
@@ -232,7 +215,13 @@ export default Component.extend(ComposerUploadUppy, {
     if (this.siteSettings.enable_mentions) {
       $input.autocomplete({
         template: findRawTemplate("user-selector-autocomplete"),
-        dataSource: this._userSearchTerm,
+        dataSource: (term) =>
+          userSearch({
+            term,
+            topicId: this.topic?.id,
+            categoryId: this.topic?.category_id || this.composer?.categoryId,
+            includeGroups: true,
+          }),
         key: "@",
         transformComplete: (v) => v.username || v.name,
         afterComplete: this._afterMentionComplete,
@@ -474,13 +463,15 @@ export default Component.extend(ComposerUploadUppy, {
   },
 
   _renderUnseenMentions(preview, unseen) {
-    // 'Create a New Topic' scenario is not supported (per conversation with codinghorror)
-    // https://meta.discourse.org/t/taking-another-1-7-release-task/51986/7
-    fetchUnseenMentions(unseen, this.get("composer.topic.id")).then((r) => {
+    fetchUnseenMentions({
+      names: unseen,
+      topicId: this.get("composer.topic.id"),
+      allowedNames: this.get("composer.targetRecipients")?.split(","),
+    }).then((response) => {
       linkSeenMentions(preview, this.siteSettings);
       this._warnMentionedGroups(preview);
       this._warnCannotSeeMention(preview);
-      this._warnHereMention(r.here_count);
+      this._warnHereMention(response.here_count);
     });
   },
 
@@ -506,28 +497,27 @@ export default Component.extend(ComposerUploadUppy, {
     }
   },
 
+  @debounce(2000)
   _warnMentionedGroups(preview) {
     schedule("afterRender", () => {
-      let found = this.warnedGroupMentions || [];
-      preview?.querySelectorAll(".mention-group.notify")?.forEach((mention) => {
-        if (this._isInQuote(mention)) {
-          return;
-        }
+      preview
+        .querySelectorAll(".mention-group[data-mentionable-user-count]")
+        .forEach((mention) => {
+          const { name } = mention.dataset;
+          if (
+            this.warnedGroupMentions.includes(name) ||
+            this._isInQuote(mention)
+          ) {
+            return;
+          }
 
-        let name = mention.dataset.name;
-        if (!found.includes(name)) {
-          this.groupsMentioned([
-            {
-              name,
-              user_count: mention.dataset.mentionableUserCount,
-              max_mentions: mention.dataset.maxMentions,
-            },
-          ]);
-          found.push(name);
-        }
-      });
-
-      this.set("warnedGroupMentions", found);
+          this.warnedGroupMentions.push(name);
+          this.groupsMentioned({
+            name,
+            userCount: mention.dataset.mentionableUserCount,
+            maxMentions: mention.dataset.maxMentions,
+          });
+        });
     });
   },
 
@@ -539,22 +529,35 @@ export default Component.extend(ComposerUploadUppy, {
       return;
     }
 
-    const warnings = [];
-
-    preview.querySelectorAll(".mention.cannot-see").forEach((mention) => {
+    preview.querySelectorAll(".mention[data-reason]").forEach((mention) => {
       const { name } = mention.dataset;
-
       if (this.warnedCannotSeeMentions.includes(name)) {
         return;
       }
 
       this.warnedCannotSeeMentions.push(name);
-      warnings.push({ name, reason: cannotSee[name] });
+      this.cannotSeeMention({
+        name,
+        reason: mention.dataset.reason,
+      });
     });
 
-    if (warnings.length > 0) {
-      this.cannotSeeMention(warnings);
-    }
+    preview
+      .querySelectorAll(".mention-group[data-reason]")
+      .forEach((mention) => {
+        const { name } = mention.dataset;
+        if (this.warnedCannotSeeMentions.includes(name)) {
+          return;
+        }
+
+        this.warnedCannotSeeMentions.push(name);
+        this.cannotSeeMention({
+          name,
+          reason: mention.dataset.reason,
+          notifiedCount: mention.dataset.notifiedUserCount,
+          isGroup: true,
+        });
+      });
   },
 
   _warnHereMention(hereCount) {
@@ -562,13 +565,7 @@ export default Component.extend(ComposerUploadUppy, {
       return;
     }
 
-    discourseLater(
-      this,
-      () => {
-        this.hereMention(hereCount);
-      },
-      2000
-    );
+    this.hereMention(hereCount);
   },
 
   @bind
