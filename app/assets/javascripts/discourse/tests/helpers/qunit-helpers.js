@@ -75,6 +75,7 @@ import { resetSidebarSection } from "discourse/lib/sidebar/custom-sections";
 import { resetNotificationTypeRenderers } from "discourse/lib/notification-types-manager";
 import { resetUserMenuTabs } from "discourse/lib/user-menu/tab";
 import { reset as resetLinkLookup } from "discourse/lib/link-lookup";
+import { resetMentions } from "discourse/lib/link-mentions";
 import { resetModelTransformers } from "discourse/lib/model-transformers";
 import { cleanupTemporaryModuleRegistrations } from "./temporary-module-helper";
 
@@ -208,6 +209,7 @@ export function testCleanup(container, app) {
   resetUserMenuTabs();
   resetLinkLookup();
   resetModelTransformers();
+  resetMentions();
   cleanupTemporaryModuleRegistrations();
 }
 
@@ -395,6 +397,14 @@ export function acceptance(name, optionsOrCallback) {
 }
 
 export function controllerFor(controller, model) {
+  deprecated(
+    'controllerFor is deprecated. Use the standard `getOwner(this).lookup("controller:NAME")` instead',
+    {
+      id: "controller-for",
+      since: "3.0.0.beta14",
+    }
+  );
+
   controller = getOwner(this).lookup("controller:" + controller);
   if (model) {
     controller.set("model", model);
@@ -410,7 +420,7 @@ export function fixture(selector) {
 }
 
 QUnit.assert.not = function (actual, message) {
-  deprecated("assert.not() is deprecated. Use assert.notOk() instead.", {
+  deprecated("assert.not() is deprecated. Use assert.false() instead.", {
     since: "2.9.0.beta1",
     dropFrom: "2.10.0.beta1",
     id: "discourse.qunit.assert-not",

@@ -1,12 +1,11 @@
 import isElementInViewport from "discourse/lib/is-element-in-viewport";
-import ChatApi from "discourse/plugins/chat/discourse/lib/chat-api";
 import { cloneJSON } from "discourse-common/lib/object";
-import ChatChannel from "discourse/plugins/chat/discourse/models/chat-channel";
 import ChatMessage from "discourse/plugins/chat/discourse/models/chat-message";
 import Component from "@ember/component";
 import discourseComputed, {
   afterRender,
   bind,
+  debounce,
   observes,
 } from "discourse-common/utils/decorators";
 import discourseDebounce from "discourse-common/lib/debounce";
@@ -38,6 +37,12 @@ const FETCH_MORE_MESSAGES_THROTTLE_MS = isTesting() ? 0 : 500;
 const PAST = "past";
 const FUTURE = "future";
 
+const MENTION_RESULT = {
+  invalid: -1,
+  unreachable: 0,
+  over_members_limit: 1,
+};
+
 export default Component.extend({
   classNameBindings: [":chat-live-pane", "sendingLoading", "loading"],
   chatChannel: null,
@@ -68,11 +73,21 @@ export default Component.extend({
   targetMessageId: null,
   hasNewMessages: null,
 
+  // Track mention hints to display warnings
+  unreachableGroupMentions: null, // Array
+  overMembersLimitGroupMentions: null, // Array
+  tooManyMentions: false,
+  mentionsCount: null,
+  // Complimentary structure to avoid repeating mention checks.
+  _mentionWarningsSeen: null, // Hash
+
   chat: service(),
+  chatChannelsManager: service(),
   router: service(),
   chatEmojiPickerManager: service(),
   chatComposerPresenceManager: service(),
   chatStateManager: service(),
+  chatApi: service(),
 
   getCachedChannelDetails: null,
   clearCachedChannelDetails: null,
@@ -82,6 +97,9 @@ export default Component.extend({
     this._super(...arguments);
 
     this.set("messages", []);
+    this.set("_mentionWarningsSeen", {});
+    this.set("unreachableGroupMentions", []);
+    this.set("overMembersLimitGroupMentions", []);
   },
 
   didInsertElement() {
@@ -153,11 +171,7 @@ export default Component.extend({
   didReceiveAttrs() {
     this._super(...arguments);
 
-    this.currentUserTimezone = this.currentUser?.resolvedTimezone(
-      this.currentUser
-    );
-
-    this.set("targetMessageId", this.chat.messageId);
+    this.currentUserTimezone = this.currentUser?.user_option.timezone;
 
     if (
       this.chatChannel?.id &&
@@ -213,7 +227,12 @@ export default Component.extend({
     }
   },
 
+  @debounce(100)
   fetchMessages(channel, options = {}) {
+    if (this._selfDeleted) {
+      return;
+    }
+
     this.set("loading", true);
 
     return this.chat.loadCookFunction(this.site.categories).then((cook) => {
@@ -242,8 +261,9 @@ export default Component.extend({
           }
           this.setMessageProps(messages, fetchingFromLastRead);
 
-          if (this.targetMessageId) {
-            this.highlightOrFetchMessage(this.targetMessageId);
+          if (options.fetchFromLastMessage) {
+            this.set("stickyScroll", true);
+            this._stickScrollToBottom();
           }
 
           this._focusComposer();
@@ -254,7 +274,6 @@ export default Component.extend({
             return;
           }
 
-          this.chat.set("messageId", null);
           this.set("loading", false);
         });
     });
@@ -393,18 +412,19 @@ export default Component.extend({
 
   setMessageProps(messages, fetchingFromLastRead) {
     this._unloadedReplyIds = [];
+    this.messageLookup = {};
+    const meta = messages.resultSetMeta;
     this.setProperties({
       messages: this._prepareMessages(messages),
       details: {
         chat_channel_id: this.chatChannel.id,
         chatable_type: this.chatChannel.chatable_type,
-        can_delete_self: messages.resultSetMeta.can_delete_self,
-        can_delete_others: messages.resultSetMeta.can_delete_others,
-        can_flag: messages.resultSetMeta.can_flag,
-        user_silenced: messages.resultSetMeta.user_silenced,
-        can_moderate: messages.resultSetMeta.can_moderate,
-        channel_message_bus_last_id:
-          messages.resultSetMeta.channel_message_bus_last_id,
+        can_delete_self: meta.can_delete_self,
+        can_delete_others: meta.can_delete_others,
+        can_flag: meta.can_flag,
+        user_silenced: meta.user_silenced,
+        can_moderate: meta.can_moderate,
+        channel_message_bus_last_id: meta.channel_message_bus_last_id,
       },
       registeredChatChannelId: this.chatChannel.id,
     });
@@ -420,6 +440,7 @@ export default Component.extend({
           position: "top",
           autoExpand: true,
         });
+
         this.set("targetMessageId", null);
       } else if (fetchingFromLastRead) {
         this._markLastReadMessage();
@@ -532,8 +553,7 @@ export default Component.extend({
   },
 
   _getLastReadId() {
-    return this.currentUser?.chat_channel_tracking_state?.[this.chatChannel.id]
-      ?.chat_message_id;
+    return this.chatChannel.currentUserMembership.last_read_message_id;
   },
 
   _markLastReadMessage(opts = { reRender: false }) {
@@ -549,12 +569,11 @@ export default Component.extend({
       return;
     }
 
-    this.set("lastSendReadMessageId", lastReadId);
     const indexOfLastReadMessage =
       this.messages.findIndex((m) => m.id === lastReadId) || 0;
     let newestUnreadMessage = this.messages[indexOfLastReadMessage + 1];
 
-    if (newestUnreadMessage) {
+    if (newestUnreadMessage && !this.targetMessageId) {
       newestUnreadMessage.set("newestMessage", true);
 
       next(() => this.scrollToMessage(newestUnreadMessage.id));
@@ -995,7 +1014,8 @@ export default Component.extend({
     // Start ajax request but don't return here, we want to stage the message instantly when all messages are loaded.
     // Otherwise, we'll fetch latest and scroll to the one we just created.
     // Return a resolved promise below.
-    const msgCreationPromise = ChatApi.sendMessage(this.chatChannel.id, data)
+    const msgCreationPromise = this.chatApi
+      .sendMessage(this.chatChannel.id, data)
       .catch((error) => {
         this._onSendError(data.staged_id, error);
       })
@@ -1006,7 +1026,7 @@ export default Component.extend({
         this.set("sendingLoading", false);
       });
 
-    if (this.details.can_load_more_future) {
+    if (this.details?.can_load_more_future) {
       msgCreationPromise.then(() => this._fetchAndScrollToLatest());
     } else {
       const stagedMessage = this._prepareSingleMessage(
@@ -1033,33 +1053,25 @@ export default Component.extend({
   },
 
   async _upsertChannelWithMessage(channel, message, uploads) {
-    let promise;
+    let promise = Promise.resolve(channel);
 
     if (channel.isDirectMessageChannel || channel.isDraft) {
       promise = this.chat.upsertDmChannelForUsernames(
         channel.chatable.users.mapBy("username")
       );
-    } else {
-      promise = ChatApi.loading(channel.id).then(() => channel);
     }
 
-    return promise
-      .then((c) => {
-        c.current_user_membership.set("following", true);
-        return this.chat.startTrackingChannel(c);
+    return promise.then((c) =>
+      ajax(`/chat/${c.id}.json`, {
+        type: "POST",
+        data: {
+          message,
+          upload_ids: (uploads || []).mapBy("id"),
+        },
+      }).then(() => {
+        this.onSwitchChannel(c);
       })
-      .then((c) =>
-        ajax(`/chat/${c.id}.json`, {
-          type: "POST",
-          data: {
-            message,
-            upload_ids: (uploads || []).mapBy("id"),
-          },
-        }).then(() => {
-          this.chat.forceRefreshChannels();
-          this.onSwitchChannel(ChatChannel.create(c));
-        })
-      );
+    );
   },
 
   _onSendError(stagedId, error) {
@@ -1089,7 +1101,8 @@ export default Component.extend({
       staged_id: stagedMessage.stagedId,
     };
 
-    ChatApi.sendMessage(this.chatChannel.id, data)
+    this.chatApi
+      .sendMessage(this.chatChannel.id, data)
       .catch((error) => {
         this._onSendError(data.staged_id, error);
       })
@@ -1314,6 +1327,81 @@ export default Component.extend({
   },
 
   @action
+  updateMentions(mentions) {
+    const mentionsCount = mentions?.length;
+    this.set("mentionsCount", mentionsCount);
+
+    if (mentionsCount > 0) {
+      if (mentionsCount > this.siteSettings.max_mentions_per_chat_message) {
+        this.set("tooManyMentions", true);
+      } else {
+        this.set("tooManyMentions", false);
+        const newMentions = mentions.filter(
+          (mention) => !(mention in this._mentionWarningsSeen)
+        );
+
+        if (newMentions?.length > 0) {
+          this._recordNewWarnings(newMentions, mentions);
+        } else {
+          this._rebuildWarnings(mentions);
+        }
+      }
+    } else {
+      this.set("tooManyMentions", false);
+      this.set("unreachableGroupMentions", []);
+      this.set("overMembersLimitGroupMentions", []);
+    }
+  },
+
+  _recordNewWarnings(newMentions, mentions) {
+    ajax("/chat/api/mentions/groups.json", {
+      data: { mentions: newMentions },
+    })
+      .then((newWarnings) => {
+        newWarnings.unreachable.forEach((warning) => {
+          this._mentionWarningsSeen[warning] = MENTION_RESULT["unreachable"];
+        });
+
+        newWarnings.over_members_limit.forEach((warning) => {
+          this._mentionWarningsSeen[warning] =
+            MENTION_RESULT["over_members_limit"];
+        });
+
+        newWarnings.invalid.forEach((warning) => {
+          this._mentionWarningsSeen[warning] = MENTION_RESULT["invalid"];
+        });
+
+        this._rebuildWarnings(mentions);
+      })
+      .catch(this._rebuildWarnings(mentions));
+  },
+
+  _rebuildWarnings(mentions) {
+    const newWarnings = mentions.reduce(
+      (memo, mention) => {
+        if (
+          mention in this._mentionWarningsSeen &&
+          !(this._mentionWarningsSeen[mention] === MENTION_RESULT["invalid"])
+        ) {
+          if (
+            this._mentionWarningsSeen[mention] === MENTION_RESULT["unreachable"]
+          ) {
+            memo[0].push(mention);
+          } else {
+            memo[1].push(mention);
+          }
+        }
+
+        return memo;
+      },
+      [[], []]
+    );
+
+    this.set("unreachableGroupMentions", newWarnings[0]);
+    this.set("overMembersLimitGroupMentions", newWarnings[1]);
+  },
+
+  @action
   reStickScrollIfNeeded() {
     if (this.stickyScroll) {
       this._stickScrollToBottom();
@@ -1404,22 +1492,25 @@ export default Component.extend({
   },
 
   _unsubscribeToUpdates(channelId) {
-    this.messageBus.unsubscribe(`/chat/${channelId}`);
+    this.messageBus.unsubscribe(`/chat/${channelId}`, this.onMessage);
   },
 
   _subscribeToUpdates(channelId) {
     this._unsubscribeToUpdates(channelId);
     this.messageBus.subscribe(
       `/chat/${channelId}`,
-      (busData) => {
-        if (!this.details.can_load_more_future || busData.type !== "sent") {
-          this.handleMessage(busData);
-        } else {
-          this.set("hasNewMessages", true);
-        }
-      },
+      this.onMessage,
       this.details.channel_message_bus_last_id
     );
+  },
+
+  @bind
+  onMessage(busData) {
+    if (!this.details.can_load_more_future || busData.type !== "sent") {
+      this.handleMessage(busData);
+    } else {
+      this.set("hasNewMessages", true);
+    }
   },
 
   @bind
@@ -1438,13 +1529,6 @@ export default Component.extend({
   _fetchAndScrollToLatest() {
     return this.fetchMessages(this.chatChannel, {
       fetchFromLastMessage: true,
-    }).then(() => {
-      if (this._selfDeleted) {
-        return;
-      }
-
-      this.set("stickyScroll", true);
-      this._stickScrollToBottom();
     });
   },
 
