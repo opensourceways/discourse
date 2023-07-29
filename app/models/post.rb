@@ -65,6 +65,7 @@ class Post < ActiveRecord::Base
 
   validates_with PostValidator, unless: :skip_validation
   validates :raw, post_moderator: true, unless: Proc.new { |v| v.new_record? }
+  validates :edit_reason, length: { maximum: 1000 }
 
   after_commit :index_search
 
