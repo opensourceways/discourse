@@ -192,6 +192,40 @@ RSpec.describe DraftsController do
 
       expect(response.status).to eq(409)
     end
+
+    context "when data is too big" do
+      let(:user) { Fabricate(:user) }
+      let(:data) { "a" * (SiteSetting.max_draft_length + 1) }
+
+      before do
+        SiteSetting.max_draft_length = 500
+        sign_in(user)
+      end
+
+      it "returns an error" do
+        post "/drafts.json",
+             params: {
+               draft_key: "xyz",
+               data: { reply: data }.to_json,
+               sequence: 0,
+             }
+        expect(response).to have_http_status :bad_request
+      end
+    end
+
+    context "when data is not too big" do
+      context "when data is not proper JSON" do
+        let(:user) { Fabricate(:user) }
+        let(:data) { "not-proper-json" }
+
+        before { sign_in(user) }
+
+        it "returns an error" do
+          post "/drafts.json", params: { draft_key: "xyz", data: data, sequence: 0 }
+          expect(response).to have_http_status :bad_request
+        end
+      end
+    end
   end
 
   describe "#destroy" do
@@ -199,8 +233,80 @@ RSpec.describe DraftsController do
       user = sign_in(Fabricate(:user))
       Draft.set(user, "xxx", 0, "hi")
       delete "/drafts/xxx.json", params: { sequence: 0 }
+
       expect(response.status).to eq(200)
       expect(Draft.get(user, "xxx", 0)).to eq(nil)
+    end
+
+    it "denies attempts to destroy unowned draft" do
+      sign_in(Fabricate(:admin))
+      user = Fabricate(:user)
+      Draft.set(user, "xxx", 0, "hi")
+      delete "/drafts/xxx.json", params: { sequence: 0, username: user.username }
+
+      # Draft is not deleted because request is not via API
+      expect(Draft.get(user, "xxx", 0)).to be_present
+    end
+
+    shared_examples "for a passed user" do
+      it "deletes draft" do
+        api_key = Fabricate(:api_key).key
+        Draft.set(recipient, "xxx", 0, "hi")
+
+        delete "/drafts/xxx.json",
+               params: {
+                 sequence: 0,
+                 username: recipient.username,
+               },
+               headers: {
+                 HTTP_API_USERNAME: caller.username,
+                 HTTP_API_KEY: api_key,
+               }
+
+        expect(response.status).to eq(response_code)
+
+        if draft_deleted
+          expect(Draft.get(recipient, "xxx", 0)).to eq(nil)
+        else
+          expect(Draft.get(recipient, "xxx", 0)).to be_present
+        end
+      end
+    end
+
+    describe "api called by admin" do
+      include_examples "for a passed user" do
+        let(:caller) { Fabricate(:admin) }
+        let(:recipient) { Fabricate(:user) }
+        let(:response_code) { 200 }
+        let(:draft_deleted) { true }
+      end
+    end
+
+    describe "api called by tl4 user" do
+      include_examples "for a passed user" do
+        let(:caller) { Fabricate(:trust_level_4) }
+        let(:recipient) { Fabricate(:user) }
+        let(:response_code) { 403 }
+        let(:draft_deleted) { false }
+      end
+    end
+
+    describe "api called by regular user" do
+      include_examples "for a passed user" do
+        let(:caller) { Fabricate(:user) }
+        let(:recipient) { Fabricate(:user) }
+        let(:response_code) { 403 }
+        let(:draft_deleted) { false }
+      end
+    end
+
+    describe "api called by admin for another admin" do
+      include_examples "for a passed user" do
+        let(:caller) { Fabricate(:admin) }
+        let(:recipient) { Fabricate(:admin) }
+        let(:response_code) { 200 }
+        let(:draft_deleted) { true }
+      end
     end
   end
 end

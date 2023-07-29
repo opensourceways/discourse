@@ -15,6 +15,7 @@ ignored:
   bundler:
     - cgi # Ruby (default gem)
     - date # Ruby (default gem)
+    - digest # Ruby (default gem)
     - io-wait # Ruby (default gem)
     - json # Ruby (default gem)
     - net-http # Ruby (default gem)
@@ -50,6 +51,7 @@ reviewed:
     - net-imap # Ruby (bundled gem)
     - net-pop # Ruby (bundled gem)
     - net-smtp # Ruby (bundled gem)
+    - nio4r # MIT + BSD
     - omniauth # MIT
     - pg # Ruby
     - r2 # Apache-2.0 (Twitter)

@@ -21,14 +21,19 @@ class TopicEmbed < ActiveRecord::Base
   end
 
   class FetchResponse
-    attr_accessor :title, :body, :author
+    attr_accessor :title, :body, :author, :url
   end
 
   def self.normalize_url(url)
-    url.downcase.sub(%r{/$}, "").sub(/\-+/, "-").strip
+    # downcase
+    # remove trailing forward slash/
+    # remove consecutive hyphens
+    # remove leading and trailing whitespace
+    url.downcase.sub(%r{/\z}, "").sub(/\-+/, "-").strip
   end
 
   def self.imported_from_html(url)
+    url = UrlHelper.normalized_encode(url)
     I18n.with_locale(SiteSetting.default_locale) do
       "\n<hr>\n<small>#{I18n.t("embed.imported_from", link: "<a href='#{url}'>#{url}</a>")}</small>\n"
     end
@@ -36,7 +41,7 @@ class TopicEmbed < ActiveRecord::Base
 
   # Import an article from a source (RSS/Atom/Other)
   def self.import(user, url, title, contents, category_id: nil, cook_method: nil, tags: nil)
-    return unless url =~ %r{^https?\://}
+    return unless url =~ %r{\Ahttps?\://}
 
     contents = first_paragraph_from(contents) if SiteSetting.embed_truncate && cook_method.nil?
     contents ||= ""
@@ -44,7 +49,7 @@ class TopicEmbed < ActiveRecord::Base
 
     url = normalize_url(url)
 
-    embed = TopicEmbed.find_by("lower(embed_url) = ?", url)
+    embed = topic_embed_by_url(url)
     content_sha1 = Digest::SHA1.hexdigest(contents)
     post = nil
 
@@ -113,17 +118,27 @@ class TopicEmbed < ActiveRecord::Base
   end
 
   def self.find_remote(url)
-    require "ruby-readability"
-
     url = UrlHelper.normalized_encode(url)
-    original_uri = URI.parse(url)
+    URI.parse(url) # ensure url parses, will raise if not
     fd = FinalDestination.new(url, validate_uri: true, max_redirects: 5, follow_canonical: true)
 
     uri = fd.resolve
     return if uri.blank?
 
+    begin
+      html = uri.read
+    rescue OpenURI::HTTPError, Net::OpenTimeout
+      return
+    end
+
+    parse_html(html, uri.to_s)
+  end
+
+  def self.parse_html(html, url)
+    require "ruby-readability"
+
     opts = {
-      tags: %w[div p code pre h1 h2 h3 b em i strong a img ul li ol blockquote],
+      tags: %w[div p code pre h1 h2 h3 b em i strong a img ul li ol blockquote figure figcaption],
       attributes: %w[href src class],
       remove_empty_nodes: false,
     }
@@ -138,14 +153,13 @@ class TopicEmbed < ActiveRecord::Base
       SiteSetting.allowed_embed_classnames if SiteSetting.allowed_embed_classnames.present?
 
     response = FetchResponse.new
-    begin
-      html = uri.read
-    rescue OpenURI::HTTPError, Net::OpenTimeout
-      return
-    end
 
     raw_doc = Nokogiri.HTML5(html)
-    auth_element = raw_doc.at('meta[@name="author"]')
+
+    response.url = url
+
+    auth_element =
+      raw_doc.at('meta[@name="discourse-username"]') || raw_doc.at('meta[@name="author"]')
     if auth_element.present?
       response.author = User.where(username_lower: auth_element[:content].strip).first
     end
@@ -198,17 +212,19 @@ class TopicEmbed < ActiveRecord::Base
           end
       end
 
-    response.body = doc.to_html
+    response.body = doc.at("body").children.to_html
     response
   end
 
-  def self.import_remote(import_user, url, opts = nil)
+  def self.import_remote(url, opts = nil)
     opts = opts || {}
     response = find_remote(url)
     return if response.nil?
 
     response.title = opts[:title] if opts[:title].present?
+    import_user = opts[:user] if opts[:user].present?
     import_user = response.author if response.author.present?
+    url = normalize_url(response.url) if response.url.present?
 
     TopicEmbed.import(import_user, url, response.title, response.body)
   end
@@ -252,11 +268,14 @@ class TopicEmbed < ActiveRecord::Base
     fragment.at("div").inner_html
   end
 
+  def self.topic_embed_by_url(embed_url)
+    embed_url = normalize_url(embed_url).sub(%r{\Ahttps?\://}, "")
+    TopicEmbed.where("embed_url ~* ?", "^https?://#{Regexp.escape(embed_url)}$").first
+  end
+
   def self.topic_id_for_embed(embed_url)
-    embed_url = normalize_url(embed_url).sub(%r{^https?\://}, "")
-    TopicEmbed.where("embed_url ~* ?", "^https?://#{Regexp.escape(embed_url)}$").pluck_first(
-      :topic_id,
-    )
+    topic_embed = topic_embed_by_url(embed_url)
+    topic_embed&.topic_id
   end
 
   def self.first_paragraph_from(html)
@@ -281,7 +300,7 @@ class TopicEmbed < ActiveRecord::Base
     Discourse
       .cache
       .fetch("embed-topic:#{post.topic_id}", expires_in: 10.minutes) do
-        url = TopicEmbed.where(topic_id: post.topic_id).pluck_first(:embed_url)
+        url = TopicEmbed.where(topic_id: post.topic_id).pick(:embed_url)
         response = TopicEmbed.find_remote(url)
 
         body = response.body

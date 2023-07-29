@@ -3,6 +3,8 @@
 require "base64"
 
 class Admin::ThemesController < Admin::AdminController
+  MAX_REMOTE_LENGTH = 10_000
+
   skip_before_action :check_xhr, only: %i[show preview export]
   before_action :ensure_admin
 
@@ -86,6 +88,12 @@ class Admin::ThemesController < Admin::AdminController
         render json: @theme.errors, status: :unprocessable_entity
       end
     elsif remote = params[:remote]
+      if remote.length > MAX_REMOTE_LENGTH
+        error =
+          I18n.t("themes.import_error.not_allowed_theme", { repo: remote[0..MAX_REMOTE_LENGTH] })
+        return render_json_error(error, status: 422)
+      end
+
       begin
         guardian.ensure_allowed_theme_repo_import!(remote.strip)
       rescue Discourse::InvalidAccess
@@ -108,7 +116,7 @@ class Admin::ThemesController < Admin::AdminController
           render json: @theme, status: :created
         rescue RemoteTheme::ImportError => e
           if params[:force]
-            theme_name = params[:remote].gsub(/.git$/, "").split("/").last
+            theme_name = params[:remote].gsub(/.git\z/, "").split("/").last
 
             remote_theme = RemoteTheme.new
             remote_theme.private_key = private_key
@@ -207,13 +215,11 @@ class Admin::ThemesController < Admin::AdminController
       @theme.public_send("#{field}=", theme_params[field]) if theme_params.key?(field)
     end
 
-    if theme_params.key?(:child_theme_ids)
-      add_relative_themes!(:child, theme_params[:child_theme_ids])
-    end
+    @theme.child_theme_ids = theme_params[:child_theme_ids] if theme_params.key?(:child_theme_ids)
 
-    if theme_params.key?(:parent_theme_ids)
-      add_relative_themes!(:parent, theme_params[:parent_theme_ids])
-    end
+    @theme.parent_theme_ids = theme_params[:parent_theme_ids] if theme_params.key?(
+      :parent_theme_ids,
+    )
 
     set_fields
     update_settings
@@ -309,24 +315,6 @@ class Admin::ThemesController < Admin::AdminController
 
   def ban_for_remote_theme!
     raise Discourse::InvalidAccess if @theme.remote_theme&.is_git?
-  end
-
-  def add_relative_themes!(kind, ids)
-    expected = ids.map(&:to_i)
-
-    relation = kind == :child ? @theme.child_theme_relation : @theme.parent_theme_relation
-
-    relation.to_a.each do |relative|
-      if kind == :child && expected.include?(relative.child_theme_id)
-        expected.reject! { |id| id == relative.child_theme_id }
-      elsif kind == :parent && expected.include?(relative.parent_theme_id)
-        expected.reject! { |id| id == relative.parent_theme_id }
-      else
-        relative.destroy
-      end
-    end
-
-    Theme.where(id: expected).each { |theme| @theme.add_relative_theme!(kind, theme) }
   end
 
   def update_default_theme
