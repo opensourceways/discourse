@@ -1,15 +1,17 @@
 # frozen_string_literal: true
 
 class Admin::ReportsController < Admin::StaffController
+  REPORTS_LIMIT = 50
+
   def index
     reports_methods =
       ["page_view_total_reqs"] +
         ApplicationRequest
           .req_types
           .keys
-          .select { |r| r =~ /^page_view_/ && r !~ /mobile/ }
+          .select { |r| r =~ /\Apage_view_/ && r !~ /mobile/ }
           .map { |r| r + "_reqs" } +
-        Report.singleton_methods.grep(/^report_(?!about|storage_stats)/)
+        Report.singleton_methods.grep(/\Areport_(?!about|storage_stats)/)
 
     reports =
       reports_methods.map do |name|
@@ -61,7 +63,7 @@ class Admin::ReportsController < Admin::StaffController
   def show
     report_type = params[:type]
 
-    raise Discourse::NotFound unless report_type =~ /^[a-z0-9\_]+$/
+    raise Discourse::NotFound unless report_type =~ /\A[a-z0-9\_]+\z/
 
     args = parse_params(params)
 
@@ -108,10 +110,7 @@ class Admin::ReportsController < Admin::StaffController
     facets = nil
     facets = report_params[:facets].map { |s| s.to_s.to_sym } if Array === report_params[:facets]
 
-    limit = nil
-    if report_params.has_key?(:limit) && report_params[:limit].to_i > 0
-      limit = report_params[:limit].to_i
-    end
+    limit = fetch_limit_from_params(params: report_params, default: nil, max: REPORTS_LIMIT)
 
     filters = nil
     filters = report_params[:filters] if report_params.has_key?(:filters)

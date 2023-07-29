@@ -137,7 +137,10 @@ RSpec.describe Admin::BackupsController do
 
   describe "#create" do
     context "when logged in as an admin" do
-      before { sign_in(admin) }
+      before do
+        sign_in(admin)
+        BackupRestore.stubs(:backup!)
+      end
 
       it "starts a backup" do
         BackupRestore.expects(:backup!).with(
@@ -148,6 +151,21 @@ RSpec.describe Admin::BackupsController do
         post "/admin/backups.json", params: { with_uploads: false, client_id: "foo" }
 
         expect(response.status).to eq(200)
+      end
+
+      context "with rate limiting enabled" do
+        before { RateLimiter.enable }
+
+        use_redis_snapshotting
+
+        after { RateLimiter.disable }
+
+        it "is rate limited" do
+          post "/admin/backups.json", params: { with_uploads: false, client_id: "foo" }
+          post "/admin/backups.json", params: { with_uploads: false, client_id: "foo" }
+
+          expect(response).to have_http_status :too_many_requests
+        end
       end
     end
 
@@ -576,7 +594,7 @@ RSpec.describe Admin::BackupsController do
           )
         end
 
-        it "works with multiple chunks when the final chunk is just the remaninder" do
+        it "works with multiple chunks when the final chunk is just the remainder" do
           freeze_time
           described_class.any_instance.expects(:has_enough_space_on_disk?).times(3).returns(true)
 

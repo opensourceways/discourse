@@ -25,8 +25,8 @@ module Middleware
     def self.compile_key_builder
       method = +"def self.__compiled_key_builder(h)\n  \""
       cache_key_segments.each do |k, v|
-        raise "Invalid key name" unless k =~ /^[a-z]+$/
-        raise "Invalid method name" unless v =~ /^key_[a-z_\?]+$/
+        raise "Invalid key name" unless k =~ /\A[a-z]+\z/
+        raise "Invalid method name" unless v =~ /\Akey_[a-z_\?]+\z/
         method << "|#{k}=#\{h.#{v}}"
       end
       method << "\"\nend"
@@ -41,6 +41,21 @@ module Middleware
 
     def self.anon_cache(env, duration)
       env["ANON_CACHE_DURATION"] = duration
+    end
+
+    def self.clear_all_cache!
+      if Rails.env.production?
+        raise "for perf reasons, clear_all_cache! cannot be used in production."
+      end
+      Discourse.redis.keys("ANON_CACHE_*").each { |k| Discourse.redis.del(k) }
+    end
+
+    def self.disable_anon_cache
+      @@disabled = true
+    end
+
+    def self.enable_anon_cache
+      @@disabled = false
     end
 
     # This gives us an API to insert anonymous cache segments
@@ -66,6 +81,7 @@ module Middleware
           !@request.path.ends_with?("srv/status") &&
           @request[Auth::DefaultCurrentUserProvider::API_KEY].nil? &&
           @env[Auth::DefaultCurrentUserProvider::USER_API_KEY].nil? &&
+          @env[Auth::DefaultCurrentUserProvider::HEADER_API_KEY].nil? &&
           CrawlerDetection.is_blocked_crawler?(@env[USER_AGENT])
       end
 
@@ -184,11 +200,13 @@ module Middleware
         request = Rack::Request.new(@env)
         request.cookies["_bypass_cache"].nil? && (request.path != "/srv/status") &&
           request[Auth::DefaultCurrentUserProvider::API_KEY].nil? &&
+          @env[Auth::DefaultCurrentUserProvider::HEADER_API_KEY].nil? &&
           @env[Auth::DefaultCurrentUserProvider::USER_API_KEY].nil?
       end
 
       def force_anonymous!
         @env[Auth::DefaultCurrentUserProvider::USER_API_KEY] = nil
+        @env[Auth::DefaultCurrentUserProvider::HEADER_API_KEY] = nil
         @env["HTTP_COOKIE"] = nil
         @env["HTTP_DISCOURSE_LOGGED_IN"] = nil
         @env["rack.request.cookie.hash"] = {}
@@ -229,7 +247,10 @@ module Middleware
       end
 
       def cacheable?
-        !!(!has_auth_cookie? && get? && no_cache_bypass)
+        !!(
+          GlobalSetting.anon_cache_store_threshold > 0 && !has_auth_cookie? && get? &&
+            no_cache_bypass
+        )
       end
 
       def compress(val)
@@ -323,6 +344,8 @@ module Middleware
     PAYLOAD_INVALID_REQUEST_METHODS = %w[GET HEAD]
 
     def call(env)
+      return @app.call(env) if defined?(@@disabled) && @@disabled
+
       if PAYLOAD_INVALID_REQUEST_METHODS.include?(env[Rack::REQUEST_METHOD]) &&
            env[Rack::RACK_INPUT].size > 0
         return 413, { "Cache-Control" => "private, max-age=0, must-revalidate" }, []

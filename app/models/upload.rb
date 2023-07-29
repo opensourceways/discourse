@@ -100,6 +100,10 @@ class Upload < ActiveRecord::Base
     self.url
   end
 
+  def to_markdown
+    UploadMarkdown.new(self).to_markdown
+  end
+
   def thumbnail(width = self.thumbnail_width, height = self.thumbnail_height)
     optimized_images.find_by(width: width, height: height)
   end
@@ -140,7 +144,7 @@ class Upload < ActiveRecord::Base
     external_copy = nil
 
     if original_path.blank?
-      external_copy = Discourse.store.download(self)
+      external_copy = Discourse.store.download!(self)
       original_path = external_copy.path
     end
 
@@ -156,13 +160,8 @@ class Upload < ActiveRecord::Base
       # this is relatively cheap once cached
       original_path = Discourse.store.path_for(self)
       if original_path.blank?
-        external_copy =
-          begin
-            Discourse.store.download(self)
-          rescue StandardError
-            nil
-          end
-        original_path = external_copy.try(:path)
+        external_copy = Discourse.store.download_safe(self)
+        original_path = external_copy&.path
       end
 
       image_info =
@@ -263,20 +262,20 @@ class Upload < ActiveRecord::Base
   end
 
   def local?
-    !(url =~ %r{^(https?:)?//})
+    !(url =~ %r{\A(https?:)?//})
   end
 
   def fix_dimensions!
     return if !FileHelper.is_supported_image?("image.#{extension}")
 
-    path =
-      if local?
-        Discourse.store.path_for(self)
-      else
-        Discourse.store.download(self).path
-      end
-
     begin
+      path =
+        if local?
+          Discourse.store.path_for(self)
+        else
+          Discourse.store.download!(self).path
+        end
+
       if extension == "svg"
         w, h =
           begin
@@ -357,13 +356,7 @@ class Upload < ActiveRecord::Base
         if local?
           Discourse.store.path_for(self)
         else
-          begin
-            Discourse.store.download(self)&.path
-          rescue OpenURI::HTTPError => e
-            # Some issue with downloading the image from a remote store.
-            # Assume the upload is broken and save an empty string to prevent re-evaluation
-            nil
-          end
+          Discourse.store.download_safe(self)&.path
         end
 
       if local_path.nil?
@@ -380,6 +373,8 @@ class Upload < ActiveRecord::Base
               "10",
               "convert",
               local_path,
+              "-depth",
+              "8",
               "-resize",
               "1x1",
               "-define",
@@ -526,7 +521,7 @@ class Upload < ActiveRecord::Base
             # keep track of the url
             previous_url = upload.url.dup
             # where is the file currently stored?
-            external = previous_url =~ %r{^//}
+            external = previous_url =~ %r{\A//}
             # download if external
             if external
               url = SiteSetting.scheme + ":" + previous_url
