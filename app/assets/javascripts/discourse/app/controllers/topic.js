@@ -36,6 +36,8 @@ import showModal from "discourse/lib/show-modal";
 import { spinnerHTML } from "discourse/helpers/loading-spinner";
 import { BookmarkFormData } from "discourse/lib/bookmark";
 import DeleteTopicConfirmModal from "discourse/components/modal/delete-topic-confirm";
+import ConvertToPublicTopicModal from "discourse/components/modal/convert-to-public-topic";
+import JumpToPost from "discourse/components/modal/jump-to-post";
 
 let customPostMessageCallbacks = {};
 
@@ -449,7 +451,7 @@ export default Controller.extend(bufferedProperty("model"), {
         } else if (composer.get("model.viewDraft")) {
           const model = composer.get("model");
           model.set("reply", model.get("reply") + "\n" + quotedText);
-          composer.send("openIfDraft");
+          composer.openIfDraft();
         } else {
           composer.open(composerOpts);
         }
@@ -879,15 +881,12 @@ export default Controller.extend(bufferedProperty("model"), {
     },
 
     jumpToPostPrompt() {
-      const topic = this.model;
-      const modal = showModal("jump-to-post", {
-        modalClass: "jump-to-post-modal",
-      });
-      modal.setProperties({
-        topic,
-        postNumber: null,
-        jumpToIndex: (index) => this.send("jumpToIndex", index),
-        jumpToDate: (date) => this.send("jumpToDate", date),
+      this.modal.show(JumpToPost, {
+        model: {
+          topic: this.model,
+          jumpToIndex: (index) => this.send("jumpToIndex", index),
+          jumpToDate: (date) => this.send("jumpToDate", date),
+        },
       });
     },
 
@@ -1185,9 +1184,8 @@ export default Controller.extend(bufferedProperty("model"), {
     },
 
     convertToPublicTopic() {
-      showModal("convert-to-public-topic", {
-        model: this.model,
-        modalClass: "convert-to-public-topic",
+      this.modal.show(ConvertToPublicTopicModal, {
+        model: { topic: this.model },
       });
     },
 
